@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .status {
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      text-align: center;
+      font-size: 14px;
+    }
+    .status.recording {
+      background-color: #e8f5e8;
+      color: #2d5a2d;
+      border: 1px solid #4caf50;
+    }
+    .status.stopped {
+      background-color: #f5f5f5;
+      color: #666;
+      border: 1px solid #ccc;
+    }
+    
+    /* 订阅状态样式 */
+    .subscription-status {
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+    }
+    .subscription-info.professional {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+    }
+    .subscription-info.free {
+      background-color: #f8f9fa;
+      color: #333;
+    }
+    .subscription-type {
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .subscription-countdown {
+      display: block;
+      font-size: 12px;
+      margin-top: 5px;
+      opacity: 0.9;
+    }
+    .subscription-countdown.warning {
+      color: #ff6b6b;
+      font-weight: bold;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.9; }
+      50% { opacity: 1; }
+      100% { opacity: 0.9; }
+    }
+    .renew-reminder {
+      margin-top: 8px;
+      padding: 6px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    .renew-reminder p {
+      margin: 0 0 5px 0;
+    }
+    
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    .btn-secondary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+      opacity: 0.8;
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      opacity: 1;
+    }
+    .btn-info {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    .btn-info:hover:not(:disabled) {
+      background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    .btn-small {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+    .stats {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border-radius: 5px;
+      font-size: 12px;
+    }
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    
+    /* 对话框样式 */
+    .dialog-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .dialog {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 300px;
+      width: 90%;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .dialog h3 {
+      margin: 0 0 15px 0;
+      color: #333;
+      font-size: 16px;
+    }
+    .dialog p {
+      margin: 0 0 10px 0;
+      color: #666;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .dialog ul {
+      margin: 10px 0;
+      padding-left: 20px;
+      color: #666;
+      font-size: 14px;
+    }
+    .dialog li {
+      margin-bottom: 5px;
+    }
+    .pricing {
+      margin: 15px 0;
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+    }
+    .pricing p {
+      margin: 5px 0;
+      font-size: 14px;
+    }
+    .discount {
+      color: #e74c3c;
+      font-size: 12px;
+    }
+    .dialog-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .dialog-buttons .btn {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+    
+    /* 使用状态显示 */
+    .usage-info {
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      font-size: 12px;
+    }
+    .premium-status, .free-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .status-badge {
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .status-badge.premium {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .status-badge.free {
+      background-color: #ff9800;
+      color: white;
+    }
+    .user-name {
+      font-size: 12px;
+      color: #666;
+    }
+    .usage-unlimited {
+      text-align: center;
+      color: #4CAF50;
+      font-weight: bold;
+    }
+    .usage-progress {
+      text-align: center;
+    }
+    .usage-text {
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background-color: #e0e0e0;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 5px;
+    }
+    .progress-fill {
+      height: 100%;
+      background-color: #4CAF50;
+      transition: width 0.3s ease;
+    }
+    .remaining-text {
+      font-size: 11px;
+      color: #666;
+    }
+    
+    /* 截图列表样式 */
+    .screenshots-section {
+      margin-top: 20px;
+      border-top: 1px solid #e0e0e0;
+      padding-top: 15px;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #333;
+      margin: 0 0 10px 0;
+    }
+    .screenshots-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .no-screenshots {
+      text-align: center;
+      color: #999;
+      font-size: 12px;
+      padding: 20px;
+    }
+    .screenshot-item {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      background: white;
+    }
+    .screenshot-header {
+      background: #f8f9fa;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .screenshot-index {
+      background: #4CAF50;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: bold;
+      min-width: 20px;
+      text-align: center;
+    }
+    .screenshot-url {
+      flex: 1;
+      margin: 0 10px;
+      font-size: 11px;
+      color: #666;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .play-button {
+      background: #6c5ce7;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      padding: 0;
+    }
+    .play-button:hover {
+      background: #5a4fcf;
+      transform: scale(1.1);
+    }
+    .play-button svg {
+      width: 14px;
+      height: 14px;
+    }
+    .screenshot-content {
+      padding: 10px;
+    }
+    .screenshot-image {
+      width: 100%;
+      max-height: 150px;
+      object-fit: contain;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      border: 1px solid #e0e0e0;
+    }
+    .screenshot-info {
+      font-size: 11px;
+      color: #666;
+    }
+    .screenshot-info p {
+      margin: 2px 0;
+      line-height: 1.3;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">智流华写助手</div>
+    <div id="status" class="status stopped">未开始记录</div>
+  </div>
+  
+  <!-- 订阅状态显示 -->
+  <div id="subscriptionStatus" class="subscription-status" style="display: none;">
+    <div id="subscriptionInfo" class="subscription-info">
+      <!-- 动态内容 -->
+    </div>
+  </div>
+  
+  <!-- 用户状态和使用情况 -->
+  <div id="userStatus" class="usage-info">
+    <div class="free-status">
+      <span class="status-badge free">免费版</span>
+    </div>
+  </div>
+  
+  <div id="usageInfo" class="usage-info">
+    <div class="usage-progress">
+      <div class="usage-text">加载中...</div>
+    </div>
+  </div>
+  
+  <div class="controls">
+    <button id="startBtn" class="btn btn-primary">开始记录</button>
+    <button id="stopBtn" class="btn btn-secondary" disabled>停止记录</button>
+    <button id="exportBtn" class="btn btn-info">导出文档</button>
+    <button id="clearBtn" class="btn btn-primary">清空记录</button>
+    <button id="upgradeBtn" class="btn btn-primary" style="display: none;">升级专业版</button>
+  </div>
+  
+  <div class="stats">
+    <div class="stat-item">
+      <span>截图数量:</span>
+      <span id="screenshotCount">0</span>
+    </div>
+    <div class="stat-item">
+      <span>点击次数:</span>
+      <span id="clickCount">0</span>
+    </div>
+    <div class="stat-item">
+      <span>记录时长:</span>
+      <span id="duration">00:00</span>
+    </div>
+  </div>
+  
+  <!-- 截图列表 -->
+  <div class="screenshots-section">
+    <h3 class="section-title">截图记录</h3>
+    <div id="screenshotsList" class="screenshots-list">
+      <div class="no-screenshots">暂无截图记录</div>
+    </div>
+  </div>
+  
+  <!-- 升级提示模态框 -->
+  <div id="upgradeModal" class="dialog-overlay" style="display: none;">
+    <div class="dialog">
+      <h3>升级专业版</h3>
+      <p id="upgradeMessage">免费版已达到使用限制，升级专业版享受无限制使用。</p>
+      <div class="pricing">
+        <p><strong>季度版：¥19.9</strong></p>
+        <p><strong>年费版：¥49.9</strong> <span class="discount">（省37%）</span></p>
+      </div>
+      <div class="dialog-buttons">
+        <button id="upgradeNowBtn" class="btn btn-primary">立即升级</button>
+        <button id="cancelUpgrade" class="btn btn-secondary">取消</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 激活码对话框 -->
+  <div id="activationModal" class="dialog-overlay" style="display: none;">
+    <div class="dialog">
+      <h3>输入授权码</h3>
+      <p>请输入您购买的专业版授权码：</p>
+      <input type="text" id="authCodeInput" style="width: 100%; padding: 8px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;" placeholder="授权码格式：XXXX-XXXX-XXXX-XXXX">
+      <p id="activationError" style="color: #f44336; font-size: 12px; margin: 5px 0;"></p>
+      <div class="dialog-buttons">
+        <button id="confirmActivation" class="btn btn-primary">确认激活</button>
+        <button id="cancelActivation" class="btn btn-secondary">取消</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="popup-clean.js"></script>
+</body>
+</html>

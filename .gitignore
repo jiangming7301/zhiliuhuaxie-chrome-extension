@@ -1,0 +1,74 @@
+# 操作系统生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 编辑器和IDE文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+temp/
+tmp/
+
+# 构建输出
+dist/
+build/
+out/
+
+# 依赖目录
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 环境配置文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 缓存文件
+.cache/
+*.cache
+
+# 压缩文件
+*.zip
+*.rar
+*.7z
+*.tar.gz
+
+# 备份文件
+*.bak
+*.backup
+
+# 测试覆盖率报告
+coverage/
+*.lcov
+
+# 运行时文件
+*.pid
+*.seed
+*.pid.lock
+
+# Chrome扩展特定文件
+# 打包后的扩展文件
+*.crx
+*.pem
+
+# 开发时的临时文件
+debug.log
