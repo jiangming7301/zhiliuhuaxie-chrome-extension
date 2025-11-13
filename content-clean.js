@@ -8,6 +8,440 @@ class ContentRecorder {
     this.init();
   }
 
+  // 单步录制功能 - 用于重新记录
+  async startSingleStepRecording(targetIndex) {
+    try {
+      console.log('启动单步录制模式，目标索引:', targetIndex);
+      
+      this.isSingleStepMode = true;
+      this.targetIndex = targetIndex;
+      
+      // 设置重新录制状态，确保截图功能可用
+      await chrome.storage.local.set({
+        isRerecording: true,
+        rerecordIndex: targetIndex,
+        rerecordMode: 'single-step'
+      });
+      
+      // 绑定点击事件监听器
+      this.singleStepClickHandler = this.handleSingleStepClick.bind(this);
+      document.addEventListener('click', this.singleStepClickHandler, true);
+      
+      // 显示提示
+      this.showSingleStepHint();
+      
+      console.log('单步录制模式已启动');
+      return { success: true };
+    } catch (error) {
+      console.error('启动单步录制失败:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  clearAllButtonStates() {
+    console.log('清理所有按钮状态');
+    
+    // 查找所有可能的按钮元素
+    const buttons = document.querySelectorAll('button, [role="button"], .btn, .button, a[href], input[type="button"], input[type="submit"]');
+    
+    buttons.forEach(button => {
+      // 移除激活状态类
+      button.classList.remove('active', 'pressed', 'clicked', 'focus', 'hover');
+      
+      // 清理焦点状态
+      if (button.blur && typeof button.blur === 'function') {
+        button.blur();
+      }
+      
+      // 重置样式
+      button.style.pointerEvents = '';
+    });
+    
+    // 清理全局焦点
+    if (document.activeElement && document.activeElement.blur) {
+      document.activeElement.blur();
+    }
+    
+    // 强制重绘
+    document.body.style.display = 'none';
+    document.body.offsetHeight; // 触发重排
+    document.body.style.display = '';
+    
+    console.log('所有按钮状态清理完成');
+  }
+
+  clearButtonStates(element) {
+    console.log('清理按钮状态');
+    
+    // 清理目标元素的状态
+    if (element) {
+      // 移除可能的激活状态类
+      element.classList.remove('active', 'pressed', 'clicked', 'focus');
+      
+      // 清理焦点状态
+      if (element.blur && typeof element.blur === 'function') {
+        element.blur();
+      }
+      
+      // 清理CSS伪类状态
+      element.style.pointerEvents = 'none';
+      setTimeout(() => {
+        element.style.pointerEvents = '';
+      }, 100);
+    }
+    
+    // 清理全局焦点状态
+    if (document.activeElement && document.activeElement.blur) {
+      document.activeElement.blur();
+    }
+    
+    console.log('按钮状态清理完成');
+  }
+
+  stopSingleStepRecording() {
+    console.log('停止单步录制模式');
+    
+    this.isSingleStepMode = false;
+    this.targetIndex = -1;
+    
+    // 清除重新录制状态
+    chrome.storage.local.set({
+      isRerecording: false,
+      rerecordIndex: -1,
+      rerecordMode: ''
+    });
+    
+    // 移除事件监听器
+    if (this.singleStepClickHandler) {
+      document.removeEventListener('click', this.singleStepClickHandler, true);
+      this.singleStepClickHandler = null;
+    }
+    
+    // 隐藏提示
+    this.hideSingleStepHint();
+  }
+
+  async handleSingleStepClick(event) {
+    try {
+      console.log('单步录制: 处理点击事件', event.target);
+      
+      // 防止事件冒泡和默认行为
+      event.stopPropagation();
+      event.preventDefault();
+      
+      // 记录原始URL
+      const originalUrl = window.location.href;
+      console.log('单步录制: 当前URL:', originalUrl);
+      
+      // 添加点击标记
+      this.addClickMarker(event.clientX, event.clientY);
+      
+      // 隐藏提示框
+      this.hideSingleStepHint();
+      
+      // 等待一小段时间让点击效果生效
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 重新触发点击事件，让原始功能执行
+      const target = event.target;
+      console.log('单步录制: 重新触发点击事件');
+      
+      // 创建新的点击事件
+      const newEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        button: event.button,
+        buttons: event.buttons
+      });
+      
+      // 暂时移除我们的事件监听器，避免递归
+      document.removeEventListener('click', this.singleStepClickHandler, true);
+      
+      // 触发原始点击
+      target.dispatchEvent(newEvent);
+      
+      // 清理按钮状态
+      this.clearButtonStates(target);
+      
+      // 等待页面变化或导航
+      console.log('单步录制: 等待页面变化...');
+      await this.waitForPageChangeOrNavigation(originalUrl);
+      
+      // 截图
+      console.log('单步录制: 开始截图');
+      await this.captureScreenshot();
+      
+      // 发送录制完成事件
+      console.log('单步录制: 发送录制完成事件');
+      chrome.runtime.sendMessage({
+        action: 'singleStepRecorded',
+        url: window.location.href,
+        timestamp: Date.now()
+      });
+      
+      console.log('单步录制: 点击处理完成');
+      
+    } catch (error) {
+      console.error('单步录制点击处理错误:', error);
+      
+      // 发送录制完成事件，但不进行额外截图
+      chrome.runtime.sendMessage({
+        action: 'singleStepRecorded',
+        url: window.location.href,
+        timestamp: Date.now(),
+        error: error.message
+      });
+    } finally {
+      // 确保停止单步录制模式
+      console.log('单步录制: 清理并停止单步录制模式');
+      
+      // 额外的按钮状态清理
+      this.clearAllButtonStates();
+      
+      this.stopSingleStepRecording();
+    }
+  }
+
+  async waitForPageChangeOrNavigation(originalUrl) {
+    return new Promise((resolve) => {
+      let resolved = false;
+      const resolveOnce = () => {
+        if (!resolved) {
+          resolved = true;
+          console.log('单步录制: 页面变化检测完成，准备截图');
+          resolve();
+        }
+      };
+      
+      // 检查URL变化（页面跳转）
+      const checkUrlChange = () => {
+        if (window.location.href !== originalUrl) {
+          console.log('单步录制: 检测到页面跳转:', window.location.href);
+          
+          // 页面跳转后，等待页面完全加载
+          const waitForPageLoad = () => {
+            if (document.readyState === 'complete') {
+              console.log('单步录制: 页面已完全加载');
+              // 额外等待一段时间确保页面渲染完成
+              setTimeout(() => {
+                console.log('单步录制: 页面渲染等待完成');
+                resolveOnce();
+              }, 1500); // 增加等待时间确保页面完全渲染
+            } else {
+              console.log('单步录制: 等待页面加载完成，当前状态:', document.readyState);
+              setTimeout(waitForPageLoad, 200);
+            }
+          };
+          
+          waitForPageLoad();
+          return true;
+        }
+        return false;
+      };
+      
+      // 立即检查一次
+      if (checkUrlChange()) return;
+      
+      // 定期检查URL变化
+      const urlCheckInterval = setInterval(() => {
+        if (checkUrlChange()) {
+          clearInterval(urlCheckInterval);
+        }
+      }, 100);
+      
+      // 监听页面变化
+      let changeDetected = false;
+      let timeoutId;
+      let stabilityTimer;
+      let changeCount = 0;
+      
+      const observer = new MutationObserver((mutations) => {
+        // 过滤掉我们自己的元素变化
+        const relevantMutations = mutations.filter(mutation => {
+          if (mutation.target && (
+            mutation.target.className === 'click-marker' ||
+            mutation.target.id === 'single-step-hint' ||
+            mutation.target.id === 'recording-indicator' ||
+            mutation.target.tagName === 'STYLE'
+          )) {
+            return false;
+          }
+          
+          // 检查是否是有意义的变化
+          if (mutation.type === 'childList') {
+            const hasSignificantNodes = Array.from(mutation.addedNodes).some(node => 
+              node.nodeType === Node.ELEMENT_NODE && 
+              !node.className?.includes('click-marker') &&
+              !node.id?.includes('hint')
+            );
+            return hasSignificantNodes;
+          }
+          
+          if (mutation.type === 'attributes') {
+            // 忽略样式变化，除非是重要的属性
+            return ['src', 'href', 'data-', 'class'].some(attr => 
+              mutation.attributeName?.startsWith(attr)
+            );
+          }
+          
+          return true;
+        });
+        
+        if (relevantMutations.length > 0) {
+          changeDetected = true;
+          changeCount++;
+          console.log(`单步录制: 检测到页面内容变化 #${changeCount}`);
+          
+          if (stabilityTimer) {
+            clearTimeout(stabilityTimer);
+          }
+          
+          // 等待页面稳定
+          stabilityTimer = setTimeout(() => {
+            console.log('单步录制: 页面变化已稳定');
+            observer.disconnect();
+            clearTimeout(timeoutId);
+            clearInterval(urlCheckInterval);
+            
+            // 确保页面完全加载后再截图
+            if (document.readyState === 'complete') {
+              setTimeout(resolveOnce, 500); // 额外等待确保渲染完成
+            } else {
+              const waitForComplete = () => {
+                if (document.readyState === 'complete') {
+                  setTimeout(resolveOnce, 500);
+                } else {
+                  setTimeout(waitForComplete, 100);
+                }
+              };
+              waitForComplete();
+            }
+          }, 1000); // 增加稳定等待时间
+        }
+      });
+      
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class', 'src', 'href', 'data-loaded', 'data-state']
+      });
+      
+      // 超时处理 - 如果没有检测到变化，也要继续
+      timeoutId = setTimeout(() => {
+        console.log('单步录制: 等待超时，继续处理');
+        observer.disconnect();
+        clearInterval(urlCheckInterval);
+        if (stabilityTimer) {
+          clearTimeout(stabilityTimer);
+        }
+        
+        // 即使没有检测到变化，也要截图
+        console.log('单步录制: 未检测到明显变化，但仍进行截图');
+        resolveOnce();
+      }, 2000); // 减少超时时间
+      
+      // 如果是同步操作（如弹窗、表单提交等），可能不会有DOM变化
+      // 添加一个短延迟后的检查
+      setTimeout(() => {
+        if (!changeDetected && !resolved) {
+          console.log('单步录制: 短延迟后未检测到变化，可能是同步操作');
+          observer.disconnect();
+          clearTimeout(timeoutId);
+          clearInterval(urlCheckInterval);
+          resolveOnce();
+        }
+      }, 500);
+    });
+  }
+
+
+
+  showSingleStepHint() {
+    console.log('显示单步录制提示');
+    
+    // 移除已存在的提示
+    const existingHint = document.getElementById('single-step-hint');
+    if (existingHint) {
+      existingHint.remove();
+    }
+    
+    // 创建提示框
+    const hint = document.createElement('div');
+    hint.id = 'single-step-hint';
+    hint.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #4CAF50;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      animation: slideUp 0.3s ease-out;
+      pointer-events: none;
+      max-width: 300px;
+      word-wrap: break-word;
+    `;
+    hint.textContent = '🔄 重新记录模式：请点击要重新截图的元素';
+    
+    // 添加动画样式
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(hint);
+    console.log('单步录制提示已显示');
+  }
+
+  hideSingleStepHint() {
+    console.log('隐藏单步录制提示');
+    const hint = document.getElementById('single-step-hint');
+    if (hint) {
+      hint.remove();
+      console.log('单步录制提示已移除');
+    } else {
+      console.log('未找到单步录制提示元素');
+    }
+  }
+
+  showSuccessMessage(message) {
+    const successDiv = document.createElement('div');
+    successDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #4CAF50;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    `;
+    successDiv.textContent = message;
+    
+    document.body.appendChild(successDiv);
+    
+    // 3秒后自动移除
+    setTimeout(() => {
+      if (successDiv.parentNode) {
+        successDiv.parentNode.removeChild(successDiv);
+      }
+    }, 3000);
+  }
+
   init() {
     console.log('Content script初始化开始');
     
@@ -29,7 +463,8 @@ class ContentRecorder {
           ping: () => this.handlePing(),
           startRecording: () => this.startRecording(),
           stopRecording: () => this.stopRecording(),
-          getRecordingState: () => ({ isRecording: this.isRecording })
+          getRecordingState: () => ({ isRecording: this.isRecording }),
+          startSingleStepRecording: () => this.startSingleStepRecording(request.targetIndex)
         };
 
         const handler = messageHandlers[request.action];
@@ -53,48 +488,48 @@ class ContentRecorder {
     return { message: 'content script is active', timestamp: Date.now() };
   }
 
-  async checkRecordingState() {
-    try {
-      if (!chrome.runtime || !chrome.runtime.id) {
-        return;
-      }
-      
-      try {
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('ping timeout'));
-          }, 3000);
-          
-          chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
-            clearTimeout(timeout);
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
-            } else {
-              resolve(response);
-            }
-          });
-        });
-      } catch (error) {
-        return;
-      }
-      
-      const result = await chrome.storage.local.get(['isRecording']);
-      
-      if (result.isRecording && !this.isRecording) {
-        console.log('检测到录制状态，启动录制');
-        this.startRecording();
-      } else if (!result.isRecording && this.isRecording) {
-        console.log('检测到停止状态，停止录制');
-        this.stopRecording();
-      }
-    } catch (error) {
-      console.error('检查录制状态失败:', error);
-      if (error.message.includes('Extension context invalidated')) {
-        setTimeout(() => {
-          this.checkRecordingState();
-        }, 3000);
-      }
+  checkRecordingState() {
+    if (!chrome.runtime || !chrome.runtime.id) {
+      console.log('Chrome runtime不可用，可能是context invalidated');
+      this.handleContextInvalidated();
+      return;
     }
+    
+    // 如果在单步录制模式，跳过全局录制状态检查
+    if (this.isSingleStepMode) {
+      console.log('单步录制模式中，跳过全局录制状态检查');
+      return;
+    }
+    
+    chrome.runtime.sendMessage({ action: 'ping' }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.log('Ping失败，可能是context invalidated:', chrome.runtime.lastError);
+        this.handleContextInvalidated();
+        return;
+      }
+      
+      chrome.storage.local.get(['isRecording'], (result) => {
+        if (chrome.runtime.lastError) {
+          console.error('获取录制状态失败:', chrome.runtime.lastError);
+          return;
+        }
+        
+        console.log('检查录制状态 - 存储:', result.isRecording, '本地:', this.isRecording);
+        
+        if (result.isRecording && !this.isRecording) {
+          console.log('检测到开始状态，启动录制');
+          this.startRecording();
+        } else if (!result.isRecording && this.isRecording) {
+          // 只有在非单步录制模式下才停止录制
+          if (!this.isSingleStepMode) {
+            console.log('检测到停止状态，停止录制');
+            this.stopRecording();
+          } else {
+            console.log('单步录制模式中，忽略全局停止状态');
+          }
+        }
+      });
+    });
   }
 
   startRecording() {
@@ -415,6 +850,39 @@ class ContentRecorder {
     }
   }
 
+  async captureScreenshot() {
+    try {
+      console.log('开始截图...');
+      
+      // 发送截图请求到background script，格式需要匹配background的处理器
+      const response = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({
+          action: 'captureScreenshot',
+          data: {
+            url: window.location.href,
+            title: document.title,
+            timestamp: Date.now(),
+            x: 0, // 单步录制不需要具体坐标
+            y: 0,
+            element: 'single-step-recording',
+            text: '单步录制'
+          }
+        }, resolve);
+      });
+      
+      if (response && response.success) {
+        console.log('截图成功');
+        return response;
+      } else {
+        console.error('截图失败:', response?.error);
+        throw new Error(response?.error || '截图失败');
+      }
+    } catch (error) {
+      console.error('截图过程出错:', error);
+      throw error;
+    }
+  }
+
   addClickMarker(x, y) {
     console.log('添加点击标记:', x, y);
     
@@ -686,15 +1154,18 @@ class ContentRecorder {
     function initializeRecorder() {
       if (global.zhiliuhuaxieContentRecorder) {
         console.log('录制器实例已存在，跳过创建');
-        return;
+        return global.zhiliuhuaxieContentRecorder;
       }
       
       try {
         console.log('创建智流华写录制器实例 - ID:', UNIQUE_ID);
         global.zhiliuhuaxieContentRecorder = new ContentRecorder();
         global.zhiliuhuaxieContentRecorder._instanceId = UNIQUE_ID;
+        console.log('录制器实例创建成功');
+        return global.zhiliuhuaxieContentRecorder;
       } catch (error) {
         console.error('创建录制器实例失败:', error);
+        return null;
       }
     }
     
