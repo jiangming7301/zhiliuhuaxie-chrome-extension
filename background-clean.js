@@ -625,8 +625,8 @@ async function startRerecordingWithTab(index, url) {
       }, 10000);
     });
     
-    // 等待额外时间确保页面完全加载
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // 等待额外时间确保页面完全加载（缩短延迟，加快提示出现）
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // 获取最新的标签页信息
     const updatedTab = await chrome.tabs.get(newTab.id);
@@ -634,13 +634,8 @@ async function startRerecordingWithTab(index, url) {
     
     // 检查URL是否支持
     if (!updatedTab.url || (!updatedTab.url.startsWith('http://') && !updatedTab.url.startsWith('https://'))) {
-      // 关闭新创建的标签页
-      try {
-        await chrome.tabs.remove(newTab.id);
-      } catch (e) {
-        console.warn('关闭标签页失败:', e);
-      }
-      
+      console.warn('目标页面不受支持，保留新标签页供用户手动处理');
+
       // 清理重新记录状态
       await chrome.storage.local.set({
         isRerecording: false,
@@ -664,13 +659,8 @@ async function startRerecordingWithTab(index, url) {
     console.log('脚本注入结果:', injectResult);
     
     if (!injectResult.success) {
-      // 关闭新创建的标签页
-      try {
-        await chrome.tabs.remove(newTab.id);
-      } catch (e) {
-        console.warn('关闭标签页失败:', e);
-      }
-      
+      console.warn('脚本注入失败，保留新标签页以避免闪退');
+
       // 清理重新记录状态
       await chrome.storage.local.set({
         isRerecording: false,
@@ -706,7 +696,7 @@ async function startRerecordingWithTab(index, url) {
       
       try {
         // 等待一段时间确保content script完全初始化
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         const response = await chrome.tabs.sendMessage(updatedTab.id, {
           action: 'startSingleStepRecording',
@@ -721,25 +711,20 @@ async function startRerecordingWithTab(index, url) {
         } else {
           console.warn(`单步录制启动失败 (尝试 ${attempts}/${maxAttempts}):`, response?.error);
           if (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 600));
           }
         }
       } catch (error) {
         console.warn(`单步录制启动异常 (尝试 ${attempts}/${maxAttempts}):`, error.message);
         if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 600));
         }
       }
     }
     
     if (!success) {
-      // 关闭新创建的标签页
-      try {
-        await chrome.tabs.remove(newTab.id);
-      } catch (e) {
-        console.warn('关闭标签页失败:', e);
-      }
-      
+      console.warn('单步录制多次尝试仍失败，保留新标签页供用户排查');
+
       // 清理重新记录状态
       await chrome.storage.local.set({
         isRerecording: false,
