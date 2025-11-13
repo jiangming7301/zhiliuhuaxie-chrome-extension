@@ -19,6 +19,8 @@ class ScreenshotEditor {
         this.currentScale = 1;
         this.backgroundImage = null;
         this.canvasStates = {};
+        this.historyStack = [];
+        this.redoStack = [];
 
         // 防止无限保存循环
         this.isSaving = false;
@@ -408,7 +410,7 @@ class ScreenshotEditor {
                 console.log('正在绘制或重置画布，跳过object:modified保存');
                 return;
             }
-            this.updateHistory();
+            this.pushHistorySnapshot();
             await this.immediateSave();
         });
 
@@ -425,7 +427,7 @@ class ScreenshotEditor {
             }
             this.tagObjectWithCurrentStep(e.path);
             this.addLayer(e.path);
-            this.updateHistory();
+            this.pushHistorySnapshot();
             this.markAsModified();
             await this.immediateSave();
         });
@@ -443,6 +445,7 @@ class ScreenshotEditor {
             }
             if (e.target && !e.target.layerId) {
                 this.addLayer(e.target);
+                this.pushHistorySnapshot();
                 await this.immediateSave();
             }
         });
@@ -455,6 +458,7 @@ class ScreenshotEditor {
                 console.log('正在绘制中，跳过object:removed保存');
                 return;
             }
+            this.pushHistorySnapshot();
             await this.immediateSave();
         });
     }
@@ -623,6 +627,10 @@ class ScreenshotEditor {
         document.getElementById('saveBtn').addEventListener('click', () => this.saveAndSync());
         document.getElementById('undoBtn').addEventListener('click', () => this.undo());
         document.getElementById('redoBtn').addEventListener('click', () => this.redo());
+        const deleteBtn = document.getElementById('deleteSelectionBtn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => this.deleteSelectedAnnotations());
+        }
 
         // 绑定截图相关事件
         this.bindScreenshotEvents();
@@ -823,8 +831,94 @@ class ScreenshotEditor {
         return lines.join('\n');
     }
 
-    updateHistory() {
-        // TODO: 实现真正的撤销/重做逻辑，目前仅作为占位
+    pushHistorySnapshot(clearRedo = true) {
+        if (!this.canvas || this.isLoadingSnapshot) {
+            return;
+        }
+        try {
+            const snapshot = this.canvas.toJSON([
+                'src',
+                'crossOrigin',
+                'selectable',
+                'evented',
+                'layerId',
+                '__stepId',
+                'name',
+                'id',
+                'strokeUniform',
+                'pathOffset',
+                'rx',
+                'ry',
+                'points',
+                'data'
+            ]);
+            this.historyStack.push(snapshot);
+            if (this.historyStack.length > 50) {
+                this.historyStack.shift();
+            }
+            if (clearRedo) {
+                this.redoStack = [];
+            }
+        } catch (error) {
+            console.warn('记录历史快照失败:', error);
+        }
+    }
+
+    restoreFromSnapshot(snapshot, targetStack) {
+        if (!snapshot || !this.canvas) {
+            return;
+        }
+        const previousState = this.canvas ? this.canvas.toJSON([
+            'src',
+            'crossOrigin',
+            'selectable',
+            'evented',
+            'layerId',
+            '__stepId',
+            'name',
+            'id',
+            'strokeUniform',
+            'pathOffset',
+            'rx',
+            'ry',
+            'points',
+            'data'
+        ]) : null;
+        if (targetStack && previousState) {
+            targetStack.push(previousState);
+        }
+        this.isLoadingSnapshot = true;
+        this.canvas.loadFromJSON(snapshot, () => {
+            this.canvas.renderAll();
+            this.isLoadingSnapshot = false;
+            this.saveCurrentEditState();
+        });
+    }
+
+    undo() {
+        if (this.historyStack.length === 0) {
+            console.log('没有可撤销的操作');
+            return;
+        }
+        const snapshot = this.historyStack.pop();
+        const currentSnapshot = this.canvas.toJSON([
+            'src','crossOrigin','selectable','evented','layerId','__stepId','name','id','strokeUniform','pathOffset','rx','ry','points','data'
+        ]);
+        this.redoStack.push(currentSnapshot);
+        this.restoreFromSnapshot(snapshot);
+    }
+
+    redo() {
+        if (this.redoStack.length === 0) {
+            console.log('没有可重做的操作');
+            return;
+        }
+        const snapshot = this.redoStack.pop();
+        const currentSnapshot = this.canvas.toJSON([
+            'src','crossOrigin','selectable','evented','layerId','__stepId','name','id','strokeUniform','pathOffset','rx','ry','points','data'
+        ]);
+        this.historyStack.push(currentSnapshot);
+        this.restoreFromSnapshot(snapshot);
     }
 
     // 加载截图到侧边栏
@@ -928,6 +1022,8 @@ class ScreenshotEditor {
 
         // 加载截图到画布
         this.loadScreenshotToCanvas(screenshot, screenshotStepId);
+        this.historyStack = [];
+        this.redoStack = [];
 
         // 更新右侧文字内容显示
         this.updateContentDisplay(screenshot, index);
@@ -1014,6 +1110,7 @@ class ScreenshotEditor {
         const finishLoading = () => {
             if (this.activeCanvasLoadToken === loadToken) {
                 this.isLoadingSnapshot = false;
+                this.pushHistorySnapshot(false);
             }
         };
 
@@ -1218,6 +1315,7 @@ class ScreenshotEditor {
 
     // 工具选择
     selectTool(toolId) {
+        const normalizedToolId = toolId.endsWith('Tool') ? toolId : `${toolId}Tool`;
         // 清除之前的工具状态
         this.canvas.isDrawingMode = false;
         this.canvas.selection = true;
@@ -1228,10 +1326,10 @@ class ScreenshotEditor {
 
         // 更新工具按钮状态
         document.querySelectorAll('.tool-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.id === toolId);
+            btn.classList.toggle('active', btn.id === normalizedToolId);
         });
 
-        this.currentTool = toolId.replace('Tool', '');
+        this.currentTool = normalizedToolId.replace('Tool', '');
 
         // 设置画布模式和光标
         switch (this.currentTool) {
@@ -1251,6 +1349,10 @@ class ScreenshotEditor {
                 canvasContainer.classList.add('drawing-pen');
                 this.canvas.freeDrawingBrush.width = parseInt(document.getElementById('strokeWidth').value);
                 this.canvas.freeDrawingBrush.color = document.getElementById('colorPicker').value;
+                this.canvas.freeDrawingBrush.onMouseUp = () => {
+                    this.pushHistorySnapshot();
+                    this.immediateSave();
+                };
                 break;
             case 'highlighter':
                 this.canvas.isDrawingMode = true;
@@ -1260,6 +1362,10 @@ class ScreenshotEditor {
                 this.canvas.freeDrawingBrush.color = document.getElementById('colorPicker').value;
                 // 设置高亮笔的透明度
                 this.canvas.freeDrawingBrush.color = this.hexToRgba(document.getElementById('colorPicker').value, 0.3);
+                this.canvas.freeDrawingBrush.onMouseUp = () => {
+                    this.pushHistorySnapshot();
+                    this.immediateSave();
+                };
                 break;
             case 'rectangle':
                 this.canvas.isDrawingMode = false;
@@ -1638,7 +1744,7 @@ class ScreenshotEditor {
         });
 
         this.currentShape = null;
-        this.updateHistory();
+        this.pushHistorySnapshot();
         this.markAsModified();
 
         // 绘制完成后触发一次保存
@@ -1688,7 +1794,7 @@ class ScreenshotEditor {
                 activeObj.set('stroke', color);
             }
             this.canvas.renderAll();
-            this.updateHistory();
+            this.pushHistorySnapshot();
         }
     }
 
@@ -1700,7 +1806,7 @@ class ScreenshotEditor {
         if (activeObj && activeObj.strokeWidth !== undefined) {
             activeObj.set('strokeWidth', parseInt(width));
             this.canvas.renderAll();
-            this.updateHistory();
+            this.pushHistorySnapshot();
         }
     }
 
@@ -1713,8 +1819,24 @@ class ScreenshotEditor {
         if (activeObj) {
             activeObj.set('opacity', opacityValue);
             this.canvas.renderAll();
-            this.updateHistory();
+            this.pushHistorySnapshot();
         }
+    }
+
+    deleteSelectedAnnotations() {
+        if (!this.canvas) {
+            return;
+        }
+        const selectedObjects = this.canvas.getActiveObjects();
+        if (!selectedObjects || selectedObjects.length === 0) {
+            alert('请先选择需要删除的标注');
+            return;
+        }
+        this.pushHistorySnapshot();
+        selectedObjects.forEach(obj => this.canvas.remove(obj));
+        this.canvas.discardActiveObject();
+        this.canvas.renderAll();
+        this.immediateSave();
     }
 
     // 侧边栏标签切换
