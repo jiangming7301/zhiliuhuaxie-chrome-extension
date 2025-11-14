@@ -75,20 +75,21 @@ class PopupController {
     
     const usageInfo = document.getElementById('usageInfo');
     if (usageInfo) {
-   // 使用安全的DOM操作替代innerHTML
-   while (usageInfo.firstChild) {
-     usageInfo.removeChild(usageInfo.firstChild);
-   }
-       
-   const loadingDiv = document.createElement('div');
-   loadingDiv.className = 'usage-progress';
-       
-   const loadingText = document.createElement('div');
-   loadingText.className = 'usage-text';
-   loadingText.textContent = '加载中...';
-       
-   loadingDiv.appendChild(loadingText);
-   usageInfo.appendChild(loadingDiv);
+      usageInfo.style.display = '';
+      // 使用安全的DOM操作替代innerHTML
+      while (usageInfo.firstChild) {
+        usageInfo.removeChild(usageInfo.firstChild);
+      }
+      
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'usage-progress';
+      
+      const loadingText = document.createElement('div');
+      loadingText.className = 'usage-text';
+      loadingText.textContent = '加载中...';
+      
+      loadingDiv.appendChild(loadingText);
+      usageInfo.appendChild(loadingDiv);
     }
     
     // 禁用所有按钮，直到加载完成
@@ -122,6 +123,7 @@ class PopupController {
     
     const usageInfo = document.getElementById('usageInfo');
     if (usageInfo) {
+      usageInfo.style.display = '';
       // 使用安全的DOM操作替代innerHTML
       while (usageInfo.firstChild) {
         usageInfo.removeChild(usageInfo.firstChild);
@@ -2003,20 +2005,19 @@ class PopupController {
     // 如果是专业版且有过期时间，在用户状态区域显示倒计时
     if (this.usageInfo && this.usageInfo.isPremium && this.usageInfo.subscriptionExpire) {
       const userStatusElement = document.getElementById('userStatus');
+      if (!userStatusElement) return;
+
       const expireDate = new Date(this.usageInfo.subscriptionExpire);
       const now = new Date();
       const timeDiff = expireDate - now;
       
       if (timeDiff > 0) {
+        userStatusElement.style.display = 'inline-flex';
+        userStatusElement.classList.add('premium');
+        userStatusElement.classList.remove('free');
         userStatusElement.innerHTML = `
-          <div class="premium-status">
-            <span class="status-badge premium">专业版</span>
-            <div id="subscriptionCountdown" class="subscription-countdown" style="color: white; font-size: 12px;"></div>
-          </div>
-          <div id="renewReminder" class="renew-reminder" style="display: none; margin-top: 8px; padding: 6px; background: rgba(255,255,255,0.2); border-radius: 4px;">
-            <p style="margin: 0 0 5px 0; font-size: 11px; color: white;">订阅即将到期，请及时续费</p>
-            <button onclick="window.open('http://localhost:3000/#pricing')" style="padding: 2px 6px; font-size: 10px; background: rgba(255,255,255,0.3); border: none; border-radius: 3px; color: white; cursor: pointer;">续费</button>
-          </div>
+          <span class="plan-label">专业版</span>
+          <button id="renewReminder" class="plan-renew" style="display: none;" onclick="window.open('http://localhost:3000/#pricing')">续费</button>
         `;
       } else {
         // 已过期
@@ -2044,10 +2045,10 @@ class PopupController {
       return;
     }
 
-    const countdownElement = document.getElementById('subscriptionCountdown');
+    const userStatusElement = document.getElementById('userStatus');
     const renewReminderElement = document.getElementById('renewReminder');
     
-    if (!countdownElement) return;
+    if (!userStatusElement) return;
 
     const expireDate = new Date(this.usageInfo.subscriptionExpire);
     const now = new Date();
@@ -2064,29 +2065,14 @@ class PopupController {
     const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
 
-    let countdownText = '';
-    if (days > 0) {
-      countdownText = `剩余: ${days}天${hours}小时`;
-    } else if (hours > 0) {
-      countdownText = `剩余: ${hours}小时${minutes}分钟`;
-    } else {
-      countdownText = `剩余: ${minutes}分钟`;
-    }
-
-    countdownElement.textContent = countdownText;
-
-    // 如果剩余时间少于7天，显示续费提醒和警告样式
+    // 如果剩余时间少于7天，显示续费提醒
     if (days <= 7) {
-      countdownElement.style.color = '#ff6b6b';
-      countdownElement.style.fontWeight = 'bold';
-      countdownElement.style.animation = 'pulse 2s infinite';
+      userStatusElement.classList.add('plan-warning');
       if (renewReminderElement) {
-        renewReminderElement.style.display = 'block';
+        renewReminderElement.style.display = 'inline-flex';
       }
     } else {
-      countdownElement.style.color = 'white';
-      countdownElement.style.fontWeight = 'normal';
-      countdownElement.style.animation = 'none';
+      userStatusElement.classList.remove('plan-warning');
       if (renewReminderElement) {
         renewReminderElement.style.display = 'none';
       }
@@ -2173,23 +2159,26 @@ ${message}
     const activateBtn = document.getElementById('activateBtn');
     
     if (this.usageInfo.isPremium) {
+      if (statusElement) {
+        statusElement.style.display = 'inline-flex';
+        statusElement.classList.add('premium');
+        statusElement.classList.remove('free');
+        statusElement.classList.remove('plan-warning');
+        const nickname = this.usageInfo.userInfo?.nickname;
+        statusElement.innerHTML = `
+          <span class="plan-label">专业版</span>
+          ${nickname ? `<span class="plan-addon">${nickname}</span>` : ''}
+        `;
+      }
       // 专业版用户
       if (!this.usageInfo.subscriptionExpire) {
         // 永久专业版或者没有过期时间的情况
-        statusElement.innerHTML = `
-          <div class="premium-status">
-            <span class="status-badge premium">专业版</span>
-            <span class="user-name">${this.usageInfo.userInfo?.nickname || '专业用户'}</span>
-          </div>
-        `;
+        // badge 已在上方渲染
       }
       // 如果有过期时间，在updateSubscriptionStatus中处理
       
-      usageElement.innerHTML = `
-        <div class="usage-unlimited">
-          <span>✨ 无限制使用</span>
-        </div>
-      `;
+      usageElement.innerHTML = '';
+      usageElement.style.display = 'none';
       upgradeBtn.style.display = 'none';
       if (activateBtn) activateBtn.style.display = 'none';
     } else {
@@ -2198,11 +2187,15 @@ ${message}
       const used = this.usageInfo.usedPages || 0;
       const total = this.usageInfo.maxFreePages || 20;
       
-      statusElement.innerHTML = `
-        <div class="free-status">
-          <span class="status-badge free">免费版</span>
-        </div>
-      `;
+      if (statusElement) {
+        statusElement.style.display = 'inline-flex';
+        statusElement.classList.add('free');
+        statusElement.classList.remove('premium');
+        statusElement.classList.remove('plan-warning');
+        statusElement.innerHTML = `
+          <span class="plan-label">免费版</span>
+        `;
+      }
       
       // 根据使用情况显示不同的进度条颜色
       let progressColor = '#4CAF50';
@@ -2212,6 +2205,7 @@ ${message}
         progressColor = '#ff9800'; // 橙色 - 接近限制
       }
       
+      usageElement.style.display = '';
       usageElement.innerHTML = `
         <div class="usage-progress">
           <div class="usage-text" style="color: ${used >= total ? '#f44336' : '#333'}">

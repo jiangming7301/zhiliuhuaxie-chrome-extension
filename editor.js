@@ -1255,6 +1255,12 @@ class ScreenshotEditor {
 
     // 加载截图到画布
     loadScreenshotToCanvas(screenshot, stepId) {
+        if (!screenshot) {
+            console.warn('loadScreenshotToCanvas: 未传入有效的截图数据');
+            this.isLoadingSnapshot = false;
+            return;
+        }
+        
         const currentStepId = stepId || this.ensureScreenshotId(screenshot);
         this.currentCanvasStepId = currentStepId;
 
@@ -2136,7 +2142,7 @@ class ScreenshotEditor {
     }
 
     // 删除截图
-    deleteScreenshot(index) {
+    async deleteScreenshot(index) {
         if (this.screenshots.length <= 1) {
             this.showError('至少需要保留一个截图');
             return;
@@ -2155,6 +2161,13 @@ class ScreenshotEditor {
             
             this.selectScreenshot(this.currentScreenshotIndex);
             this.markAsModified();
+
+            try {
+                await this.syncEditedDataToMainStorage();
+            } catch (error) {
+                console.error('删除截图后同步数据失败:', error);
+                this.showError('同步最新步骤列表失败，请稍后再试');
+            }
         }
     }
 
@@ -2461,9 +2474,7 @@ class ScreenshotEditor {
             return updatedOp;
         });
 
-        // 将未出现在本次编辑中的记录附加在末尾，保持其原有顺序
-        existingMap.forEach(op => merged.push(op));
-
+        // updatedOps 是最新权威数据，未匹配的旧数据视为已删除，因此不再附加
         return merged;
     }
 
