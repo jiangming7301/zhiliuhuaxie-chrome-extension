@@ -1167,6 +1167,10 @@ class LongScreenshotManager {
     this.fixedHeaderHeight = 0;
     this.dynamicOverlap = this.segmentOverlap;
     this.maxDataUrlLength = 4 * 1024 * 1024;
+    this.stickyHideDelay = 120;
+    this.maxStickyDetectionDepth = 6;
+    this.stickySampleYs = [2, 6, 12, 24, 48, 72];
+    this.stickySampleXRatios = [0.5, 0.35, 0.65];
   }
 
   beginCapture(options = {}) {
@@ -1242,18 +1246,35 @@ class LongScreenshotManager {
         await this.scrollToOffset(metrics.offsets[index]);
         await this.waitForStability();
 
-        const segmentResponse = await this.messageSender({
-          action: 'longScreenshotCaptureSegment',
-          sessionId: this.sessionId,
-          segmentIndex: index,
-          totalSegments: metrics.offsets.length
-        });
+        let hiddenStickyRecords = [];
+        let stickyHeight = 0;
+        if (index > 0) {
+          hiddenStickyRecords = this.temporarilyHideStickyHeaders();
+          stickyHeight = this.calculateStickyHeight(hiddenStickyRecords);
+          if (hiddenStickyRecords.length && this.stickyHideDelay) {
+            await new Promise(resolve => setTimeout(resolve, this.stickyHideDelay));
+          }
+        }
+
+        let segmentResponse;
+        try {
+          segmentResponse = await this.messageSender({
+            action: 'longScreenshotCaptureSegment',
+            sessionId: this.sessionId,
+            segmentIndex: index,
+            totalSegments: metrics.offsets.length
+          });
+        } finally {
+          if (hiddenStickyRecords.length) {
+            this.restoreStickyHeaders(hiddenStickyRecords);
+          }
+        }
 
         if (!segmentResponse || !segmentResponse.success || !segmentResponse.dataUrl) {
           throw new Error(segmentResponse?.error || '捕获页面失败');
         }
 
-        await this.drawSegment(ctx, segmentResponse.dataUrl, metrics, metrics.offsets[index], index);
+        await this.drawSegment(ctx, segmentResponse.dataUrl, metrics, metrics.offsets[index], index, stickyHeight);
 
         await this.notifyUpdate({
           status: 'capturing',
@@ -1369,6 +1390,110 @@ class LongScreenshotManager {
     return 0;
   }
 
+  collectStickyHeaderElements() {
+    if (typeof document.elementsFromPoint !== 'function') {
+      return [];
+    }
+    const width = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 0);
+    const height = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 0);
+    const maxTop = Math.min(200, height * 0.35);
+    const seen = new Set();
+    const elements = [];
+
+    for (const ratio of this.stickySampleXRatios) {
+      const x = Math.min(width - 1, Math.max(1, Math.round(width * ratio)));
+      for (const sampleY of this.stickySampleYs) {
+        const y = Math.min(maxTop, sampleY);
+        const found = document.elementsFromPoint(x, y) || [];
+        for (const node of found) {
+          let current = node;
+          let depth = 0;
+          while (current && current !== document.body && current !== document.documentElement && depth < this.maxStickyDetectionDepth) {
+            depth++;
+            if (seen.has(current)) {
+              break;
+            }
+            const style = window.getComputedStyle(current);
+            if (!['fixed', 'sticky'].includes(style.position)) {
+              current = current.parentElement;
+              continue;
+            }
+            const rect = current.getBoundingClientRect();
+            if (!rect) {
+              break;
+            }
+            if (rect.top < -5 || rect.top > maxTop) {
+              current = current.parentElement;
+              continue;
+            }
+            if (rect.height < 30 || rect.height > height * 0.8 || rect.width < width * 0.4) {
+              current = current.parentElement;
+              continue;
+            }
+            seen.add(current);
+            elements.push(current);
+            break;
+          }
+        }
+      }
+    }
+
+    return elements;
+  }
+
+  temporarilyHideStickyHeaders() {
+    try {
+      const candidates = this.collectStickyHeaderElements();
+      if (!candidates || !candidates.length) {
+        return [];
+      }
+      return candidates.map(el => {
+        const record = {
+          el,
+          visibility: el.style.visibility,
+          pointerEvents: el.style.pointerEvents,
+          transition: el.style.transition,
+          height: el.getBoundingClientRect()?.height || 0
+        };
+        el.style.visibility = 'hidden';
+        el.style.pointerEvents = 'none';
+        el.style.transition = 'none';
+        return record;
+      });
+    } catch (error) {
+      console.warn('临时隐藏固定头部失败:', error);
+      return [];
+    }
+  }
+
+  restoreStickyHeaders(records = []) {
+    records.forEach(record => {
+      if (!record || !record.el) return;
+      try {
+        record.el.style.visibility = record.visibility || '';
+        record.el.style.pointerEvents = record.pointerEvents || '';
+        record.el.style.transition = record.transition || '';
+      } catch (error) {
+        console.warn('恢复固定头部失败:', error);
+      }
+    });
+  }
+
+  calculateStickyHeight(records = []) {
+    if (!records || !records.length) return 0;
+    return records.reduce((sum, record) => {
+      if (!record || !record.el) return sum;
+      if (record.height && Number.isFinite(record.height)) {
+        return sum + record.height;
+      }
+      const rect = record.el.getBoundingClientRect();
+      if (rect && rect.height) {
+        return sum + rect.height;
+      }
+      return sum;
+    }, 0);
+  }
+
   createCanvas(metrics) {
     const canvas = document.createElement('canvas');
     const width = Math.max(1, Math.round(metrics.viewportWidth * metrics.devicePixelRatio));
@@ -1380,13 +1505,17 @@ class LongScreenshotManager {
     return { canvas, ctx };
   }
 
-  async drawSegment(ctx, dataUrl, metrics, offsetY, segmentIndex) {
+  async drawSegment(ctx, dataUrl, metrics, offsetY, segmentIndex, dynamicHeaderHeight = 0) {
     const img = await this.loadImage(dataUrl);
     const dpr = metrics.devicePixelRatio;
     const overlapCss = metrics.overlap || this.segmentOverlap;
     const seamTopTrim = segmentIndex === 0 ? 0 : Math.min(8, overlapCss * 0.5);
     const seamBottomTrim = 0;
-    const headerCutCss = segmentIndex === 0 ? 0 : (metrics.fixedHeader || 0);
+    let headerCutCss = segmentIndex === 0 ? 0 : (dynamicHeaderHeight || metrics.fixedHeader || 0);
+    const maxAllowedCut = Math.max(0, overlapCss - seamTopTrim);
+    if (segmentIndex > 0 && maxAllowedCut > 0) {
+      headerCutCss = Math.min(headerCutCss, maxAllowedCut);
+    }
     const totalTopCutCss = headerCutCss + seamTopTrim;
     const cutTopPx = Math.max(0, Math.round(totalTopCutCss * dpr));
     const targetY = Math.round((offsetY + totalTopCutCss) * dpr);

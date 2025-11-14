@@ -473,7 +473,7 @@ async function captureScreenshot(data, tab) {
 
 async function saveLongScreenshotOperation(payload) {
   const storage = await chrome.storage.local.get(['operations']);
-  const operations = storage.operations || [];
+  const operations = (storage.operations || []).filter(Boolean);
   
   if (operations.length >= MAX_OPERATION_RECORDS) {
     operations.splice(0, operations.length - MAX_OPERATION_RECORDS + 1);
@@ -490,8 +490,45 @@ async function saveLongScreenshotOperation(payload) {
   };
   
   operations.push(operation);
-  await chrome.storage.local.set({ operations });
+  await persistOperationsWithQuotaGuard(operations);
   return operation;
+}
+
+async function persistOperationsWithQuotaGuard(operations) {
+  const ops = Array.isArray(operations) ? [...operations] : [];
+  if (!ops.length) {
+    await chrome.storage.local.set({ operations: [] });
+    return;
+  }
+  
+  let lastError = null;
+  while (ops.length) {
+    try {
+      await chrome.storage.local.set({ operations: ops });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!isQuotaExceededError(error)) {
+        throw error;
+      }
+      if (ops.length === 1) {
+        console.warn('单条整页截图记录仍超出存储限制，无法保存:', error);
+        throw error;
+      }
+      const removed = ops.shift();
+      console.warn('存储空间不足，已移除最旧记录并重试', { removedId: removed?.id });
+    }
+  }
+  if (lastError) {
+    throw lastError;
+  }
+}
+
+function isQuotaExceededError(error) {
+  if (!error) return false;
+  const message = (error && error.message) ? error.message : String(error);
+  if (!message) return false;
+  return message.toLowerCase().includes('quota');
 }
 
 // 获取录制状态
