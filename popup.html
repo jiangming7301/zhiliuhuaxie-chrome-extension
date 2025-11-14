@@ -89,6 +89,11 @@
       flex-direction: column;
       gap: 10px;
     }
+    .longshot-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
     .btn {
       padding: 12px 20px;
       border: none;
@@ -149,6 +154,30 @@
       background-color: #f9f9f9;
       border-radius: 5px;
       font-size: 12px;
+    }
+    .longshot-status {
+      font-size: 12px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background-color: #e3f2fd;
+      color: #0d47a1;
+      border: 1px solid rgba(13, 71, 161, 0.2);
+      display: none;
+    }
+    .longshot-status.capturing {
+      background-color: #fff8e1;
+      color: #ff8f00;
+      border-color: rgba(255, 143, 0, 0.3);
+    }
+    .longshot-status.error {
+      background-color: #ffebee;
+      color: #c62828;
+      border-color: rgba(198, 40, 40, 0.3);
+    }
+    .longshot-status.success {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+      border-color: rgba(46, 125, 50, 0.3);
     }
     .stat-item {
       display: flex;
@@ -669,6 +698,11 @@
   <div class="controls">
     <button id="startBtn" class="btn btn-primary">开始记录</button>
     <button id="stopBtn" class="btn btn-secondary" disabled>停止记录</button>
+    <div class="longshot-wrapper">
+      <button id="longShotBtn" class="btn btn-info">整页截图</button>
+      <button id="cancelLongShotBtn" class="btn btn-secondary btn-small" style="display: none;">取消整页截图</button>
+      <div id="longShotStatus" class="longshot-status"></div>
+    </div>
     <button id="exportBtn" class="btn btn-info">导出文档</button>
     <button id="clearBtn" class="btn btn-primary">清空记录</button>
     <button id="upgradeBtn" class="btn btn-primary" style="display: none;">升级专业版</button>

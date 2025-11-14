@@ -435,7 +435,6 @@ body {
     border: 1px solid #e5e5e7;
 }
 
-/* 画布光标设置 */
 .canvas-container canvas {
     cursor: crosshair;
 }

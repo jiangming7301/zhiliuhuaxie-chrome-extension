@@ -12,6 +12,11 @@ class PopupController {
     this.editorOriginalHeight = 0;
     this.editorCanvasWidth = 0;
     this.editorCanvasHeight = 0;
+    this.isLongCaptureRunning = false;
+    this.longCaptureState = { status: 'idle' };
+    this.lastLongCaptureOperationId = null;
+    this.runtimeListenerRegistered = false;
+    this.lastLongCaptureErrorSignature = null;
     this.init();
   }
 
@@ -20,6 +25,7 @@ class PopupController {
     try {
       // 先绑定事件，确保UI可响应
       this.bindEvents();
+      this.setupRuntimeListeners();
       
       // 显示加载状态
       this.showLoadingState();
@@ -43,6 +49,7 @@ class PopupController {
       
       // 更新UI
       this.updateUI();
+      await this.syncLongScreenshotState();
       
       console.log('初始化完成');
     } catch (error) {
@@ -85,7 +92,7 @@ class PopupController {
     }
     
     // 禁用所有按钮，直到加载完成
-    const buttons = ['startBtn', 'stopBtn', 'exportBtn', 'clearBtn', 'upgradeBtn'];
+    const buttons = ['startBtn', 'stopBtn', 'exportBtn', 'clearBtn', 'upgradeBtn', 'longShotBtn', 'cancelLongShotBtn'];
     buttons.forEach(id => {
       const btn = document.getElementById(id);
       if (btn) {
@@ -93,6 +100,13 @@ class PopupController {
         btn.style.opacity = '0.5';
       }
     });
+    
+    const longShotStatus = document.getElementById('longShotStatus');
+    if (longShotStatus) {
+      longShotStatus.style.display = 'none';
+      longShotStatus.textContent = '';
+      longShotStatus.className = 'longshot-status';
+    }
   }
 
   // 显示错误状态
@@ -185,6 +199,16 @@ class PopupController {
       upgradeBtn.addEventListener('click', () => this.openUpgradePage());
     }
     
+    const longShotBtn = document.getElementById('longShotBtn');
+    if (longShotBtn) {
+      longShotBtn.addEventListener('click', () => this.startLongScreenshot());
+    }
+    
+    const cancelLongShotBtn = document.getElementById('cancelLongShotBtn');
+    if (cancelLongShotBtn) {
+      cancelLongShotBtn.addEventListener('click', () => this.cancelLongScreenshot());
+    }
+    
     // 授权码按钮事件绑定
     const activateBtn = document.getElementById('activateBtn');
     if (activateBtn) {
@@ -201,6 +225,117 @@ class PopupController {
     
     if (cancelActivation) {
       cancelActivation.addEventListener('click', () => this.hideActivationDialog());
+    }
+  }
+
+  setupRuntimeListeners() {
+    if (this.runtimeListenerRegistered || !chrome.runtime || !chrome.runtime.onMessage) {
+      return;
+    }
+    
+    chrome.runtime.onMessage.addListener((message) => {
+      if (!message || !message.action) {
+        return;
+      }
+      if (message.action === 'longScreenshotStatus') {
+        this.handleLongScreenshotStatus(message.state || {});
+      }
+    });
+    
+    this.runtimeListenerRegistered = true;
+  }
+
+  async syncLongScreenshotState() {
+    try {
+      const response = await this.sendMessage({ action: 'getLongScreenshotState' });
+      if (response && (response.state || response.status)) {
+        // 兼容直接返回state或扁平结构
+        const state = response.state || response;
+        this.handleLongScreenshotStatus(state);
+      }
+    } catch (error) {
+      console.warn('获取整页截图状态失败:', error.message || error);
+    }
+  }
+
+  handleLongScreenshotStatus(state = {}) {
+    this.longCaptureState = state || { status: 'idle' };
+    const runningStatuses = ['initializing', 'capturing', 'canceling'];
+    this.isLongCaptureRunning = runningStatuses.includes(this.longCaptureState.status);
+    
+    if (state.status === 'completed' && state.operationId && this.lastLongCaptureOperationId !== state.operationId) {
+      this.lastLongCaptureOperationId = state.operationId;
+      this.updateStats().catch(err => console.error('更新统计失败:', err));
+    }
+    
+    this.updateLongCaptureUI();
+    
+    if (state.status === 'error' && state.message) {
+      const signature = `${state.sessionId || 'unknown'}_${state.message}`;
+      if (this.lastLongCaptureErrorSignature !== signature) {
+        this.lastLongCaptureErrorSignature = signature;
+        this.showWarningMessage(`整页截图失败：${state.message}`);
+      }
+    } else if (state.status !== 'error') {
+      this.lastLongCaptureErrorSignature = null;
+    }
+  }
+
+  buildLongShotStatusText(state) {
+    if (!state || !state.status || state.status === 'idle') {
+      return '';
+    }
+    const progress = state.progress || {};
+    switch (state.status) {
+      case 'initializing':
+        return '整页截图准备中...';
+      case 'capturing':
+        if (progress.total) {
+          return `整页截图进行中 ${progress.captured || 0}/${progress.total}`;
+        }
+        return '整页截图进行中...';
+      case 'canceling':
+        return '正在取消整页截图...';
+      case 'completed':
+        return '整页截图完成';
+      case 'canceled':
+        return '整页截图已取消';
+      case 'error':
+        return `整页截图失败：${state.message || '未知错误'}`;
+      default:
+        return '整页截图状态更新';
+    }
+  }
+
+  updateLongCaptureUI() {
+    const button = document.getElementById('longShotBtn');
+    const cancelBtn = document.getElementById('cancelLongShotBtn');
+    const statusEl = document.getElementById('longShotStatus');
+    const state = this.longCaptureState || { status: 'idle' };
+    const isRunning = ['initializing', 'capturing', 'canceling'].includes(state.status);
+    
+    if (button) {
+      const disabled = this.isRecording || isRunning;
+      button.disabled = disabled;
+      button.style.opacity = disabled ? '0.5' : '1';
+    }
+    
+    if (cancelBtn) {
+      cancelBtn.style.display = isRunning ? 'block' : 'none';
+      cancelBtn.disabled = !isRunning;
+      cancelBtn.style.opacity = isRunning ? '1' : '0.6';
+    }
+    
+    if (statusEl) {
+      if (state.status && state.status !== 'idle') {
+        statusEl.style.display = 'block';
+        statusEl.textContent = this.buildLongShotStatusText(state);
+        statusEl.className = `longshot-status ${state.status}`;
+      } else {
+        statusEl.style.display = 'none';
+        statusEl.textContent = '';
+        statusEl.className = 'longshot-status';
+      }
     }
   }
 
@@ -306,7 +441,7 @@ class PopupController {
       const operations = await this.getOperationsData();
       
       // 统计截图和点击数量
-      const screenshots = operations.filter(op => op.type === 'click' && op.screenshot).length;
+      const screenshots = operations.filter(op => op.screenshot).length;
       const clicks = operations.filter(op => op.type === 'click').length;
       
       // 更新显示
@@ -367,7 +502,7 @@ class PopupController {
     if (!screenshotsContainer) return;
     
     // 过滤出有截图的操作
-    const screenshotOps = operations.filter(op => op.type === 'click' && op.screenshot);
+    const screenshotOps = operations.filter(op => op.screenshot);
     
     if (screenshotOps.length === 0) {
       screenshotsContainer.innerHTML = '<div class="no-screenshots">暂无截图记录</div>';
@@ -398,19 +533,45 @@ class PopupController {
     for (let index = 0; index < screenshotOps.length; index++) {
       const op = screenshotOps[index];
       const stepNumber = index + 1;
-      const time = new Date(op.timestamp).toLocaleString();
+      const isLongScreenshot = op.type === 'long_screenshot';
+      const time = op.timestamp ? new Date(op.timestamp).toLocaleString() : '时间未知';
 
-      // 简化URL显示
-      const displayUrl = op.url.length > 50 ? op.url.substring(0, 50) + '...' : op.url;
+      const rawUrl = op.url || '无可用地址';
+      const displayUrl = rawUrl.length > 50 ? rawUrl.substring(0, 50) + '...' : rawUrl;
 
-      // 异步获取显示用的截图
       const displayScreenshot = await this.getDisplayScreenshot(op);
+
+      const rerecordButton = !isLongScreenshot ? `
+              <button class="rerecord-button" data-index="${index}" data-url="${op.url || ''}" title="重新记录此截图">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23,4 23,10 17,10"></polyline>
+                  <polyline points="1,20 1,14 7,14"></polyline>
+                  <path d="M20.49,9A9,9,0,0,0,5.64,5.64L1,10m22,4L18.36,18.36A9,9,0,0,1,3.51,15"></path>
+                </svg>
+              </button>
+      ` : '';
+
+      const longShotMetrics = [];
+      if (isLongScreenshot) {
+        if (op.meta && Number.isFinite(op.meta.segments)) {
+          longShotMetrics.push(`段数 ${op.meta.segments}`);
+        }
+        if (op.meta && Number.isFinite(op.meta.height)) {
+          longShotMetrics.push(`高度 ${Math.round(op.meta.height)}px`);
+        }
+        if (op.meta && Number.isFinite(op.meta.captureDurationMs)) {
+          longShotMetrics.push(`耗时 ${(op.meta.captureDurationMs / 1000).toFixed(1)}s`);
+        }
+      }
+      const infoText = isLongScreenshot
+        ? (longShotMetrics.length ? longShotMetrics.join(' · ') : '整页截图')
+        : (op.text ? `"${op.text}"` : '无文本');
 
       screenshotsHtml += `
         <div class="screenshot-item">
           <div class="screenshot-header">
             <span class="screenshot-index">${stepNumber}</span>
-            <span class="screenshot-url" title="${op.url}">当前地址：${displayUrl}</span>
+            <span class="screenshot-url" title="${rawUrl}">当前地址：${displayUrl}</span>
             <div class="screenshot-actions">
               <button class="edit-button" data-index="${index}" title="编辑截图">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -418,14 +579,8 @@ class PopupController {
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
               </button>
-              <button class="rerecord-button" data-index="${index}" data-url="${op.url}" title="重新记录此截图">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="23,4 23,10 17,10"></polyline>
-                  <polyline points="1,20 1,14 7,14"></polyline>
-                  <path d="M20.49,9A9,9,0,0,0,5.64,5.64L1,10m22,4L18.36,18.36A9,9,0,0,1,3.51,15"></path>
-                </svg>
-              </button>
-              <button class="play-button" data-url="${op.url}" title="跳转到此页面">
+              ${rerecordButton}
+              <button class="play-button" data-url="${op.url || ''}" title="跳转到此页面">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="5,3 19,12 5,21"></polygon>
                 </svg>
@@ -435,7 +590,7 @@ class PopupController {
           <div class="screenshot-content">
             <img src="${displayScreenshot}" alt="截图${stepNumber}" class="screenshot-image">
             <div class="screenshot-info">
-              <p><strong>点击内容:</strong> "${op.text || '无文本'}"</p>
+              <p><strong>${isLongScreenshot ? '截图类型' : '点击内容'}:</strong> ${infoText}</p>
               <p><strong>时间:</strong> ${time}</p>
             </div>
           </div>
@@ -1165,28 +1320,52 @@ class PopupController {
       }
       
       if (screenshotIndex >= 0 && screenshotIndex < operations.length) {
-        // 将所有截图数据和当前选中的索引存储到localStorage，供editor.html使用
         const editorData = {
-          operations: operations,  // 传递所有截图数据
-          currentIndex: screenshotIndex  // 当前选中的截图索引
+          operations,
+          currentIndex: screenshotIndex
         };
-        
-        localStorage.setItem('editorData', JSON.stringify(editorData));
-        // 同步持久化当前索引，确保编辑器刷新后仍保持选中
-        try {
-          localStorage.setItem('editorCurrentIndex', String(screenshotIndex));
-        } catch (e) {
-          console.warn('写入 editorCurrentIndex 失败:', e);
+
+        let storedInChrome = false;
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+          try {
+            await chrome.storage.local.set({
+              operations,
+              editorCurrentIndex: screenshotIndex,
+              editorContext: {
+                source: 'popup',
+                timestamp: Date.now()
+              }
+            });
+            storedInChrome = true;
+          } catch (storageError) {
+            console.warn('写入 chrome.storage 失败，回退到 localStorage:', storageError);
+          }
         }
-        
-        // 在新标签页中打开编辑器
-        if (typeof chrome !== 'undefined' && chrome.tabs) {
-          // Chrome扩展环境
-          chrome.tabs.create({
-            url: chrome.runtime.getURL('editor.html')
-          });
+
+        if (!storedInChrome) {
+          try {
+            localStorage.setItem('editorData', JSON.stringify(editorData));
+            localStorage.setItem('editorCurrentIndex', String(screenshotIndex));
+          } catch (writeError) {
+            console.error('写入本地缓存失败，无法打开编辑器:', writeError);
+            throw writeError;
+          }
         } else {
-          // 普通网页环境
+          try {
+            localStorage.removeItem('editorData');
+          } catch (removeError) {
+            console.warn('清理本地 editorData 失败:', removeError);
+          }
+          try {
+            localStorage.setItem('editorCurrentIndex', String(screenshotIndex));
+          } catch (e) {
+            console.warn('写入 editorCurrentIndex 失败:', e);
+          }
+        }
+
+        if (typeof chrome !== 'undefined' && chrome.tabs) {
+          chrome.tabs.create({ url: chrome.runtime.getURL('editor.html') });
+        } else {
           window.open('editor.html', '_blank');
         }
       }
@@ -2045,6 +2224,65 @@ ${message}
     });
   }
 
+  async startLongScreenshot() {
+    if (this.isRecording) {
+      this.showWarningMessage('请先停止录制后再进行整页截图');
+      return;
+    }
+    if (this.isLongCaptureRunning) {
+      this.showWarningMessage('整页截图正在进行，请稍候');
+      return;
+    }
+    
+    const button = document.getElementById('longShotBtn');
+    if (button) {
+      button.textContent = '准备中...';
+      button.disabled = true;
+      button.style.opacity = '0.5';
+    }
+    
+    try {
+      const response = await this.sendMessage({ action: 'startLongScreenshot' }, 15000);
+      if (!response || !response.success) {
+        if (response && response.error === 'USAGE_LIMIT_EXCEEDED') {
+          this.showUpgradePrompt(response.message || '免费版已达到限制，请升级后使用整页截图');
+          return;
+        }
+        if (response && response.error === 'SUBSCRIPTION_EXPIRED') {
+          this.handleSubscriptionExpired();
+          return;
+        }
+        throw new Error(response?.message || response?.error || '启动整页截图失败');
+      }
+      
+      if (response.state) {
+        this.handleLongScreenshotStatus(response.state);
+      }
+    } catch (error) {
+      console.error('启动整页截图失败:', error);
+      this.showWarningMessage(`无法启动整页截图：${error.message || error}`);
+    } finally {
+      if (button) {
+        button.textContent = '整页截图';
+        const disabled = this.isRecording || this.isLongCaptureRunning;
+        button.disabled = disabled;
+        button.style.opacity = disabled ? '0.5' : '1';
+      }
+    }
+  }
+
+  async cancelLongScreenshot() {
+    if (!this.longCaptureState || !this.longCaptureState.sessionId) {
+      return;
+    }
+    try {
+      await this.sendMessage({ action: 'cancelLongScreenshot' }, 5000);
+    } catch (error) {
+      console.error('取消整页截图失败:', error);
+      this.showWarningMessage('取消整页截图失败，请稍后重试');
+    }
+  }
+
   async startRecording() {
     try {
       // 检查使用限制
@@ -2360,6 +2598,8 @@ ${message}
         clearBtn.style.opacity = '1';
       }
     }
+
+    this.updateLongCaptureUI();
   }
 
   async exportDocument() {
@@ -2373,18 +2613,20 @@ ${message}
       }
       
       // 检查截图数量限制
-      const screenshots = operations.filter(op => op.type === 'click' && op.screenshot).length;
+      const screenshots = operations.filter(op => op.screenshot).length;
       
       if (this.usageInfo && !this.usageInfo.isPremium && screenshots > 20) {
         // 免费版超过20张截图时，只导出前20张，并提示升级
-        const limitedOperations = operations.filter(op => op.type === 'click' && op.screenshot).slice(0, 20);
+        const limitedOperations = operations
+          .filter(op => op.screenshot)
+          .slice(0, 20);
         alert(`免费版限制20张截图，将导出前20张截图。升级专业版可导出全部${screenshots}张截图！`);
         this.showExportOptions(limitedOperations);
         return;
       }
       
       // 显示导出选项（专业版）
-      const exportOperations = operations.filter(op => op.type === 'click' && op.screenshot);
+      const exportOperations = operations.filter(op => op.screenshot);
       this.showExportOptions(exportOperations);
       
     } catch (error) {

@@ -5,6 +5,7 @@ class ContentRecorder {
     this.lastScreenshotTime = 0;
     this.screenshotDelay = 500;
     this.stateCheckInterval = null;
+    this.longScreenshotManager = new LongScreenshotManager((payload) => this.sendMessageSafely(payload));
     this.init();
   }
 
@@ -36,6 +37,21 @@ class ContentRecorder {
       console.error('启动单步录制失败:', error);
       return { success: false, error: error.message };
     }
+  }
+
+  startLongScreenshotCapture(request = {}) {
+    if (!this.longScreenshotManager) {
+      this.longScreenshotManager = new LongScreenshotManager((payload) => this.sendMessageSafely(payload));
+    }
+    const result = this.longScreenshotManager.beginCapture(request);
+    return result || { success: true };
+  }
+
+  cancelLongScreenshotCapture() {
+    if (this.longScreenshotManager) {
+      this.longScreenshotManager.cancel();
+    }
+    return { success: true };
   }
 
   clearAllButtonStates() {
@@ -464,7 +480,9 @@ class ContentRecorder {
           startRecording: () => this.startRecording(),
           stopRecording: () => this.stopRecording(),
           getRecordingState: () => ({ isRecording: this.isRecording }),
-          startSingleStepRecording: () => this.startSingleStepRecording(request.targetIndex)
+          startSingleStepRecording: () => this.startSingleStepRecording(request.targetIndex),
+          startLongScreenshotCapture: () => this.startLongScreenshotCapture(request),
+          cancelLongScreenshotCapture: () => this.cancelLongScreenshotCapture()
         };
 
         const handler = messageHandlers[request.action];
@@ -1129,6 +1147,354 @@ class ContentRecorder {
     this.clickHandler = null;
     
     console.log('Content script清理完成');
+  }
+}
+
+class LongScreenshotManager {
+  constructor(messageSender) {
+    this.messageSender = messageSender;
+    this.isRunning = false;
+    this.canceled = false;
+    this.sessionId = null;
+    this.segmentOverlap = 60;
+    this.captureDelay = 600;
+    this.additionalStabilityDelay = 250;
+    this.maxStabilityChecks = 5;
+    this.pendingImageCheckInterval = 200;
+    this.pendingImageTimeout = 4000;
+    this.maxCanvasDimension = 32760;
+    this.scrollingElement = document.scrollingElement || document.documentElement || document.body;
+    this.fixedHeaderHeight = 0;
+    this.dynamicOverlap = this.segmentOverlap;
+    this.maxDataUrlLength = 4 * 1024 * 1024;
+  }
+
+  beginCapture(options = {}) {
+    if (this.isRunning) {
+      return { success: false, error: 'CAPTURE_RUNNING' };
+    }
+    if (!options.sessionId) {
+      return { success: false, error: 'MISSING_SESSION' };
+    }
+
+    this.isRunning = true;
+    this.canceled = false;
+    this.sessionId = options.sessionId;
+    this.fixedHeaderHeight = 0;
+    this.dynamicOverlap = this.segmentOverlap;
+    this.startTime = Date.now();
+    this.originalScroll = {
+      x: window.scrollX,
+      y: window.scrollY
+    };
+    this.originalScrollBehavior = document.documentElement.style.scrollBehavior;
+    document.documentElement.style.scrollBehavior = 'auto';
+
+    this.executeCaptureFlow().catch((error) => {
+      console.error('整页截图执行失败:', error);
+      this.notifyUpdate({
+        status: 'error',
+        message: error.message || '整页截图失败',
+        error: error.message
+      });
+    }).finally(() => {
+      this.restoreScroll();
+      document.documentElement.style.scrollBehavior = this.originalScrollBehavior || '';
+      this.isRunning = false;
+      this.sessionId = null;
+      this.fixedHeaderHeight = 0;
+      this.dynamicOverlap = this.segmentOverlap;
+    });
+
+    return { success: true };
+  }
+
+  cancel() {
+    if (!this.isRunning) {
+      return;
+    }
+    this.canceled = true;
+  }
+
+  async executeCaptureFlow() {
+    try {
+      const metrics = this.calculateMetrics();
+      if (!metrics.offsets.length) {
+        throw new Error('无法计算页面高度，请稍后再试');
+      }
+      this.fixedHeaderHeight = metrics.fixedHeader || 0;
+      this.dynamicOverlap = metrics.overlap || this.segmentOverlap;
+
+      await this.notifyUpdate({
+        status: 'capturing',
+        progress: { captured: 0, total: metrics.offsets.length },
+        message: '正在截取整页'
+      });
+
+      const { canvas, ctx } = this.createCanvas(metrics);
+
+      for (let index = 0; index < metrics.offsets.length; index++) {
+        if (this.canceled) {
+          await this.notifyUpdate({ status: 'canceled', message: '用户已取消' });
+          return;
+        }
+
+        await this.scrollToOffset(metrics.offsets[index]);
+        await this.waitForStability();
+
+        const segmentResponse = await this.messageSender({
+          action: 'longScreenshotCaptureSegment',
+          sessionId: this.sessionId,
+          segmentIndex: index,
+          totalSegments: metrics.offsets.length
+        });
+
+        if (!segmentResponse || !segmentResponse.success || !segmentResponse.dataUrl) {
+          throw new Error(segmentResponse?.error || '捕获页面失败');
+        }
+
+        await this.drawSegment(ctx, segmentResponse.dataUrl, metrics, metrics.offsets[index], index);
+
+        await this.notifyUpdate({
+          status: 'capturing',
+          progress: { captured: index + 1, total: metrics.offsets.length }
+        });
+      }
+
+      if (this.canceled) {
+        await this.notifyUpdate({ status: 'canceled', message: '用户已取消' });
+        return;
+      }
+
+      const exportResult = await this.exportCanvasData(canvas);
+      const dataUrl = exportResult.dataUrl;
+      await this.messageSender({
+        action: 'longScreenshotComplete',
+        sessionId: this.sessionId,
+        screenshot: dataUrl,
+        meta: {
+          width: Math.round(metrics.viewportWidth),
+          height: Math.round(metrics.totalHeight),
+          segments: metrics.offsets.length,
+          devicePixelRatio: metrics.devicePixelRatio,
+          captureDurationMs: Date.now() - this.startTime,
+          overlap: metrics.overlap,
+          format: exportResult.format,
+          quality: exportResult.quality
+        },
+        url: window.location.href,
+        title: document.title
+      });
+    } catch (error) {
+      if (this.canceled) {
+        await this.notifyUpdate({ status: 'canceled', message: '用户已取消' });
+        return;
+      }
+      throw error;
+    }
+  }
+
+  calculateMetrics() {
+    const viewportWidth = Math.max(window.innerWidth, document.documentElement.clientWidth || 0);
+    const viewportHeight = Math.max(window.innerHeight, document.documentElement.clientHeight || 0);
+
+    if (!viewportWidth || !viewportHeight) {
+      throw new Error('当前页面不可见，请切换到目标标签页再试');
+    }
+
+    const totalHeight = Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight,
+      viewportHeight
+    );
+    const offsets = [];
+    const fixedHeader = this.detectFixedHeaderHeight();
+    const effectiveOverlap = Math.max(this.segmentOverlap, Math.ceil(fixedHeader) + 20);
+    const step = Math.max(1, viewportHeight - effectiveOverlap);
+    let current = 0;
+    while (current < totalHeight) {
+      const offset = Math.min(current, Math.max(0, totalHeight - viewportHeight));
+      offsets.push(Math.max(0, Math.floor(offset)));
+      if (current + viewportHeight >= totalHeight) {
+        break;
+      }
+      current += step;
+    }
+    if (!offsets.length) {
+      offsets.push(0);
+    }
+
+    const uniqueOffsets = Array.from(new Set(offsets));
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const pixelHeight = Math.round(totalHeight * devicePixelRatio);
+    const pixelWidth = Math.round(viewportWidth * devicePixelRatio);
+
+    if (pixelHeight > this.maxCanvasDimension || pixelWidth > this.maxCanvasDimension) {
+      throw new Error('页面尺寸超过32,000像素限制，暂不支持整页截图');
+    }
+
+    return {
+      offsets: uniqueOffsets,
+      totalHeight,
+      viewportHeight,
+      viewportWidth,
+      devicePixelRatio,
+      fixedHeader,
+      overlap: effectiveOverlap
+    };
+  }
+
+  detectFixedHeaderHeight() {
+    try {
+      const probeY = Math.min(10, window.innerHeight / 10);
+      let element = document.elementFromPoint(window.innerWidth / 2, probeY);
+      let depth = 0;
+      while (element && element !== document.body && depth < 10) {
+        depth++;
+        const style = window.getComputedStyle(element);
+        if (['fixed', 'sticky'].includes(style.position)) {
+          const top = parseFloat(style.top || '0');
+          if (!Number.isNaN(top) && top <= 2) {
+            const rect = element.getBoundingClientRect();
+            if (rect.height > 40 && rect.height < window.innerHeight * 0.8 && rect.width > window.innerWidth * 0.5) {
+              return rect.height;
+            }
+          }
+        }
+        element = element.parentElement;
+      }
+    } catch (error) {
+      console.warn('检测固定头部失败:', error);
+    }
+    return 0;
+  }
+
+  createCanvas(metrics) {
+    const canvas = document.createElement('canvas');
+    const width = Math.max(1, Math.round(metrics.viewportWidth * metrics.devicePixelRatio));
+    const height = Math.max(1, Math.round(metrics.totalHeight * metrics.devicePixelRatio));
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    return { canvas, ctx };
+  }
+
+  async drawSegment(ctx, dataUrl, metrics, offsetY, segmentIndex) {
+    const img = await this.loadImage(dataUrl);
+    const dpr = metrics.devicePixelRatio;
+    const overlapCss = metrics.overlap || this.segmentOverlap;
+    const seamTopTrim = segmentIndex === 0 ? 0 : Math.min(6, overlapCss * 0.4);
+    const seamBottomTrim = segmentIndex === metrics.offsets.length - 1 ? 0 : Math.min(6, overlapCss * 0.4);
+    const headerCutCss = segmentIndex === 0 ? 0 : (metrics.fixedHeader || 0);
+    const totalTopCutCss = headerCutCss + seamTopTrim;
+    const cutTopPx = Math.max(0, Math.round(totalTopCutCss * dpr));
+    const targetY = Math.round((offsetY + totalTopCutCss) * dpr);
+    const remainingCss = Math.max(0, metrics.totalHeight - offsetY);
+    const visibleCss = Math.min(metrics.viewportHeight, remainingCss);
+    const effectiveCss = Math.max(0, visibleCss - totalTopCutCss - seamBottomTrim);
+    if (effectiveCss <= 0) {
+      return;
+    }
+    const visiblePx = Math.max(1, Math.round(effectiveCss * dpr));
+    const targetWidth = Math.round(metrics.viewportWidth * dpr);
+    const bottomTrimPx = Math.max(0, Math.round(seamBottomTrim * dpr));
+    const maxSourceHeight = img.height - cutTopPx - bottomTrimPx;
+    const sourceHeight = Math.min(visiblePx, Math.max(1, maxSourceHeight));
+    ctx.drawImage(img, 0, cutTopPx, img.width, sourceHeight, 0, targetY, targetWidth, sourceHeight);
+  }
+
+  async loadImage(dataUrl) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('分段图像加载失败'));
+      img.src = dataUrl;
+    });
+  }
+
+  async notifyUpdate(state) {
+    if (!this.sessionId) {
+      return;
+    }
+    try {
+      await this.messageSender({
+        action: 'longScreenshotUpdate',
+        sessionId: this.sessionId,
+        state
+      });
+    } catch (error) {
+      console.warn('发送整页截图状态失败:', error);
+    }
+  }
+
+  async waitForStability() {
+    let lastHeight = document.documentElement.scrollHeight;
+    let lastWidth = document.documentElement.scrollWidth;
+    for (let i = 0; i < this.maxStabilityChecks; i++) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => setTimeout(resolve, this.captureDelay));
+      const currentHeight = document.documentElement.scrollHeight;
+      const currentWidth = document.documentElement.scrollWidth;
+      const heightChanged = Math.abs(currentHeight - lastHeight) > 2;
+      const widthChanged = Math.abs(currentWidth - lastWidth) > 2;
+      if (!heightChanged && !widthChanged) {
+        break;
+      }
+      lastHeight = currentHeight;
+      lastWidth = currentWidth;
+    }
+    await this.waitForPendingImages();
+    if (this.additionalStabilityDelay) {
+      await new Promise(resolve => setTimeout(resolve, this.additionalStabilityDelay));
+    }
+  }
+
+  async scrollToOffset(offset) {
+    if (typeof offset !== 'number' || Number.isNaN(offset)) {
+      return;
+    }
+    window.scrollTo(0, offset);
+  }
+
+  restoreScroll() {
+    window.scrollTo(this.originalScroll?.x || 0, this.originalScroll?.y || 0);
+  }
+
+  async exportCanvasData(canvas) {
+    const pngData = canvas.toDataURL('image/png', 0.92);
+    if (pngData.length <= this.maxDataUrlLength) {
+      return { dataUrl: pngData, format: 'png' };
+    }
+    const qualities = [0.9, 0.85, 0.8, 0.75, 0.7];
+    for (const quality of qualities) {
+      const jpegData = canvas.toDataURL('image/jpeg', quality);
+      if (jpegData.length <= this.maxDataUrlLength) {
+        return { dataUrl: jpegData, format: 'jpeg', quality };
+      }
+    }
+    const fallback = canvas.toDataURL('image/jpeg', 0.65);
+    return { dataUrl: fallback, format: 'jpeg', quality: 0.65 };
+  }
+
+  async waitForPendingImages() {
+    const start = Date.now();
+    while (Date.now() - start < this.pendingImageTimeout) {
+      const pending = Array.from(document.images || []).some(img => this.isImagePendingInViewport(img));
+      if (!pending) {
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, this.pendingImageCheckInterval));
+    }
+  }
+
+  isImagePendingInViewport(img) {
+    if (!img || img.complete) {
+      return false;
+    }
+    const rect = img.getBoundingClientRect();
+    const buffer = 200;
+    return rect.bottom >= -buffer && rect.top <= (window.innerHeight || 0) + buffer;
   }
 }
 

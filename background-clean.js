@@ -1,6 +1,92 @@
 // Chrome扩展后台服务脚本
 console.log('智流华写插件后台脚本已加载');
 
+const LONG_SCREENSHOT_TIMEOUT = 120000; // 2分钟超时
+const MAX_OPERATION_RECORDS = 100;
+const CAPTURE_MIN_INTERVAL = 600; // 防止触发MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND
+const initialLongScreenshotState = {
+  status: 'idle',
+  sessionId: null,
+  tabId: null,
+  windowId: null,
+  progress: null,
+  message: '',
+  error: null,
+  operationId: null,
+  startedAt: null,
+  targetUrl: null,
+  targetTitle: null
+};
+let longScreenshotState = { ...initialLongScreenshotState };
+let longScreenshotTimeoutId = null;
+let lastCaptureTimestamp = 0;
+
+function getSerializableLongScreenshotState() {
+  return JSON.parse(JSON.stringify(longScreenshotState));
+}
+
+function broadcastLongScreenshotState() {
+  const payload = { action: 'longScreenshotStatus', state: getSerializableLongScreenshotState() };
+  try {
+    chrome.runtime.sendMessage(payload, () => {
+      if (chrome.runtime.lastError) {
+        // 通常是没有前台监听者，忽略即可
+      }
+    });
+  } catch (error) {
+    console.warn('广播整页截图状态失败:', error);
+  }
+}
+
+function updateLongScreenshotState(partial = {}) {
+  const nextState = { ...longScreenshotState };
+  Object.keys(partial).forEach((key) => {
+    nextState[key] = partial[key];
+  });
+  longScreenshotState = nextState;
+  broadcastLongScreenshotState();
+}
+
+function resetLongScreenshotState(partial = {}) {
+  longScreenshotState = { ...initialLongScreenshotState, ...partial };
+  broadcastLongScreenshotState();
+}
+
+function clearLongScreenshotTimeout() {
+  if (longScreenshotTimeoutId) {
+    clearTimeout(longScreenshotTimeoutId);
+    longScreenshotTimeoutId = null;
+  }
+}
+
+function resetLongScreenshotTimeout() {
+  clearLongScreenshotTimeout();
+  longScreenshotTimeoutId = setTimeout(handleLongScreenshotTimeout, LONG_SCREENSHOT_TIMEOUT);
+}
+
+async function handleLongScreenshotTimeout() {
+  console.warn('整页截图任务超时');
+  if (!longScreenshotState.sessionId) {
+    return;
+  }
+  try {
+    await sendMessageToTab(longScreenshotState.tabId, {
+      action: 'cancelLongScreenshotCapture',
+      sessionId: longScreenshotState.sessionId,
+      reason: 'timeout'
+    });
+  } catch (error) {
+    console.warn('发送超时取消消息失败:', error.message);
+  } finally {
+    clearLongScreenshotTimeout();
+    resetLongScreenshotState({
+      status: 'error',
+      error: 'timeout',
+      message: '整页截图超时，请重试'
+    });
+  }
+}
+
 // 插件安装时初始化
 chrome.runtime.onInstalled.addListener(async () => {
   console.log('智流华写助手插件已安装');
@@ -44,7 +130,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     startRerecording: () => startRerecording(request.index, request.url),
     startRerecordingWithTab: () => startRerecordingWithTab(request.index, request.url),
     handleRerecordScreenshot: () => handleRerecordScreenshot(request.data, sender.tab),
-    singleStepRecorded: () => handleSingleStepRecorded(request, sender.tab)
+    singleStepRecorded: () => handleSingleStepRecorded(request, sender.tab),
+    startLongScreenshot: () => startLongScreenshot(),
+    cancelLongScreenshot: () => cancelLongScreenshot('user'),
+    getLongScreenshotState: () => Promise.resolve({ success: true, state: getSerializableLongScreenshotState() }),
+    longScreenshotCaptureSegment: () => handleLongScreenshotCaptureSegment(request, sender),
+    longScreenshotUpdate: () => handleLongScreenshotUpdate(request),
+    longScreenshotComplete: () => handleLongScreenshotComplete(request, sender)
   };
   
   const handler = messageHandlers[request.action];
@@ -155,6 +247,19 @@ async function checkUsageLimit() {
   }
 }
 
+async function incrementUsageCount() {
+  try {
+    const result = await chrome.storage.local.get(['isPremium', 'usageCount']);
+    if (result.isPremium) {
+      return;
+    }
+    const newUsageCount = (result.usageCount || 0) + 1;
+    await chrome.storage.local.set({ usageCount: newUsageCount });
+  } catch (error) {
+    console.warn('更新使用次数失败:', error);
+  }
+}
+
 // 开始录制
 async function startRecording() {
   try {
@@ -220,12 +325,7 @@ async function stopRecording() {
     console.log('停止录制函数被调用');
     
     // 更新使用计数（免费版）
-    const result = await chrome.storage.local.get(['isPremium', 'usageCount']);
-    
-    if (!result.isPremium) {
-      const newUsageCount = (result.usageCount || 0) + 1;
-      await chrome.storage.local.set({ usageCount: newUsageCount });
-    }
+    await incrementUsageCount();
     
     // 设置录制状态
     await chrome.storage.local.set({
@@ -309,9 +409,8 @@ async function captureScreenshot(data, tab) {
     const operations = storage.operations || [];
     
     // 限制操作记录数量
-    const MAX_OPERATIONS = 100;
-    if (operations.length >= MAX_OPERATIONS) {
-      operations.splice(0, operations.length - MAX_OPERATIONS + 1);
+    if (operations.length >= MAX_OPERATION_RECORDS) {
+      operations.splice(0, operations.length - MAX_OPERATION_RECORDS + 1);
     }
     
     let screenshotUrl = null;
@@ -372,10 +471,71 @@ async function captureScreenshot(data, tab) {
   }
 }
 
+async function saveLongScreenshotOperation(payload) {
+  const storage = await chrome.storage.local.get(['operations']);
+  const operations = storage.operations || [];
+  
+  if (operations.length >= MAX_OPERATION_RECORDS) {
+    operations.splice(0, operations.length - MAX_OPERATION_RECORDS + 1);
+  }
+  
+  const operation = {
+    type: 'long_screenshot',
+    timestamp: Date.now(),
+    url: payload.url,
+    title: payload.title,
+    screenshot: payload.screenshot,
+    meta: payload.meta || {},
+    id: Date.now() + Math.random()
+  };
+  
+  operations.push(operation);
+  await chrome.storage.local.set({ operations });
+  return operation;
+}
+
 // 获取录制状态
 async function getRecordingState() {
   const result = await chrome.storage.local.get(['isRecording']);
   return { isRecording: result.isRecording || false };
+}
+
+function sendMessageToTab(tabId, message) {
+  return new Promise((resolve, reject) => {
+    if (!tabId) {
+      reject(new Error('无效的标签页ID'));
+      return;
+    }
+    chrome.tabs.sendMessage(tabId, message, (response) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve(response);
+      }
+    });
+  });
+}
+
+async function ensureCaptureInterval() {
+  const now = Date.now();
+  const elapsed = now - lastCaptureTimestamp;
+  if (elapsed < CAPTURE_MIN_INTERVAL) {
+    await new Promise(resolve => setTimeout(resolve, CAPTURE_MIN_INTERVAL - elapsed));
+  }
+  lastCaptureTimestamp = Date.now();
+}
+
+function isSupportedUrl(url = '') {
+  return typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'));
+}
+
+async function getActiveWebTab() {
+  const [activeTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  if (activeTab && isSupportedUrl(activeTab.url)) {
+    return activeTab;
+  }
+  const tabs = await chrome.tabs.query({ lastFocusedWindow: true });
+  return tabs.find(tab => isSupportedUrl(tab.url)) || null;
 }
 
 // 动态注入content script
@@ -955,6 +1115,288 @@ async function handleSingleStepRecorded(request, tab) {
     return {
       success: false,
       error: error.message
+    };
+  }
+}
+
+async function startLongScreenshot() {
+  try {
+    if (longScreenshotState.sessionId) {
+      return {
+        success: false,
+        error: 'SESSION_RUNNING',
+        message: '整页截图正在进行，请稍候完成后再试'
+      };
+    }
+
+    const limitCheck = await checkUsageLimit();
+    if (!limitCheck.allowed) {
+      return {
+        success: false,
+        error: 'USAGE_LIMIT_EXCEEDED',
+        message: limitCheck.message
+      };
+    }
+
+    const recordingState = await chrome.storage.local.get(['isRecording']);
+    if (recordingState.isRecording) {
+      return {
+        success: false,
+        error: 'RECORDING_ACTIVE',
+        message: '请先停止录制后再进行整页截图'
+      };
+    }
+
+    const activeTab = await getActiveWebTab();
+    if (!activeTab) {
+      return {
+        success: false,
+        error: 'INVALID_TAB',
+        message: '请在普通网页中使用整页截图功能'
+      };
+    }
+
+    const injectResult = await injectContentScript(activeTab);
+    if (!injectResult.success) {
+      return {
+        success: false,
+        error: injectResult.error || '无法注入脚本',
+        message: injectResult.error || '页面暂不支持整页截图'
+      };
+    }
+
+    const sessionId = `longshot_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    updateLongScreenshotState({
+      status: 'initializing',
+      sessionId,
+      tabId: activeTab.id,
+      windowId: activeTab.windowId,
+      progress: { captured: 0, total: 0 },
+      message: '准备中',
+      error: null,
+      operationId: null,
+      startedAt: Date.now(),
+      targetUrl: activeTab.url,
+      targetTitle: activeTab.title
+    });
+    resetLongScreenshotTimeout();
+
+    const response = await sendMessageToTab(activeTab.id, {
+      action: 'startLongScreenshotCapture',
+      sessionId,
+      url: activeTab.url,
+      title: activeTab.title
+    });
+
+    if (!response || !response.success) {
+      clearLongScreenshotTimeout();
+      resetLongScreenshotState({
+        status: 'error',
+        error: response?.error || '启动失败',
+        message: response?.message || '页面拒绝整页截图'
+      });
+      return {
+        success: false,
+        error: response?.error || '无法启动整页截图',
+        message: response?.message || '无法启动整页截图'
+      };
+    }
+
+    return {
+      success: true,
+      state: getSerializableLongScreenshotState()
+    };
+  } catch (error) {
+    console.error('启动整页截图失败:', error);
+    clearLongScreenshotTimeout();
+    resetLongScreenshotState({
+      status: 'error',
+      error: error.message,
+      message: error.message || '启动整页截图失败'
+    });
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+async function cancelLongScreenshot(reason = 'user') {
+  if (!longScreenshotState.sessionId) {
+    return { success: true, message: '当前没有进行中的整页截图' };
+  }
+
+  try {
+    updateLongScreenshotState({
+      status: 'canceling',
+      message: reason === 'timeout' ? '超时取消中' : '正在取消整页截图',
+      error: null
+    });
+
+    await sendMessageToTab(longScreenshotState.tabId, {
+      action: 'cancelLongScreenshotCapture',
+      sessionId: longScreenshotState.sessionId,
+      reason
+    });
+
+    resetLongScreenshotTimeout();
+    return { success: true };
+  } catch (error) {
+    console.error('取消整页截图失败:', error);
+    clearLongScreenshotTimeout();
+    resetLongScreenshotState({
+      status: 'error',
+      error: error.message,
+      message: '取消整页截图失败，请重试'
+    });
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+async function handleLongScreenshotCaptureSegment(request, sender) {
+  try {
+    if (!request || request.sessionId !== longScreenshotState.sessionId) {
+      return { success: false, error: 'SESSION_MISMATCH' };
+    }
+
+    if (!sender.tab || sender.tab.id !== longScreenshotState.tabId) {
+      return { success: false, error: 'TAB_MISMATCH' };
+    }
+
+    resetLongScreenshotTimeout();
+    await ensureCaptureInterval();
+
+    const capture = async () => chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: 'png' });
+    let screenshotUrl = null;
+    try {
+      screenshotUrl = await capture();
+    } catch (error) {
+      if (error && /MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND/i.test(error.message || '')) {
+        await new Promise(resolve => setTimeout(resolve, CAPTURE_MIN_INTERVAL));
+        await ensureCaptureInterval();
+        screenshotUrl = await capture();
+      } else {
+        throw error;
+      }
+    }
+
+    return {
+      success: true,
+      dataUrl: screenshotUrl
+    };
+  } catch (error) {
+    console.error('捕获整页截图分段失败:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+async function handleLongScreenshotUpdate(request) {
+  try {
+    if (!request || request.sessionId !== longScreenshotState.sessionId) {
+      return { success: false, error: 'SESSION_MISMATCH' };
+    }
+
+    const state = request.state || {};
+
+    if (state.status === 'canceled') {
+      clearLongScreenshotTimeout();
+      resetLongScreenshotState({
+        status: 'canceled',
+        message: state.message || '整页截图已取消',
+        error: null
+      });
+      return { success: true };
+    }
+
+    if (state.status === 'error') {
+      clearLongScreenshotTimeout();
+      resetLongScreenshotState({
+        status: 'error',
+        message: state.message || '整页截图失败',
+        error: state.error || 'unknown'
+      });
+      return { success: true };
+    }
+
+    resetLongScreenshotTimeout();
+    const partial = {
+      status: state.status || longScreenshotState.status,
+      message: state.message || longScreenshotState.message,
+      error: state.error || null
+    };
+    if (typeof state.progress !== 'undefined') {
+      partial.progress = state.progress;
+    }
+    updateLongScreenshotState(partial);
+    return { success: true };
+  } catch (error) {
+    console.error('更新整页截图状态失败:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+async function handleLongScreenshotComplete(request, sender) {
+  try {
+    if (!request || request.sessionId !== longScreenshotState.sessionId) {
+      return { success: false, error: 'SESSION_MISMATCH' };
+    }
+
+    if (!request.screenshot) {
+      return { success: false, error: 'MISSING_IMAGE' };
+    }
+
+    clearLongScreenshotTimeout();
+
+    const derivedMeta = {
+      ...(request.meta || {})
+    };
+
+    if (derivedMeta.captureDurationMs == null && longScreenshotState.startedAt) {
+      derivedMeta.captureDurationMs = Date.now() - longScreenshotState.startedAt;
+    }
+
+    const operation = await saveLongScreenshotOperation({
+      screenshot: request.screenshot,
+      url: request.url || longScreenshotState.targetUrl || sender.tab?.url || '',
+      title: request.title || longScreenshotState.targetTitle || sender.tab?.title || '',
+      meta: derivedMeta
+    });
+
+    await incrementUsageCount();
+
+    resetLongScreenshotState({
+      status: 'completed',
+      message: '整页截图完成',
+      error: null,
+      operationId: operation.id
+    });
+
+    return {
+      success: true,
+      operationId: operation.id
+    };
+  } catch (error) {
+    console.error('整页截图完成处理失败:', error);
+    clearLongScreenshotTimeout();
+    const quotaError = error && error.message && error.message.includes('Quota');
+    resetLongScreenshotState({
+      status: 'error',
+      error: quotaError ? 'storage_quota' : error.message,
+      message: quotaError ? '整页截图过大导致存储空间不足，请导出后清理部分截图再试' : '保存整页截图失败，请重试'
+    });
+    return {
+      success: false,
+      error: quotaError ? 'storage_quota' : error.message,
+      message: quotaError ? '浏览器存储空间不足，无法保存整页截图' : error.message
     };
   }
 }

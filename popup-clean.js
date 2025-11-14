@@ -259,7 +259,7 @@ class PopupManager {
       const result = await chrome.storage.local.get(['operations']);
       const operations = result.operations || [];
       
-      const screenshots = operations.filter(op => op.type === 'click' && op.screenshot).length;
+      const screenshots = operations.filter(op => op.screenshot).length;
       const clicks = operations.filter(op => op.type === 'click').length;
       
       const screenshotCountEl = document.getElementById('screenshotCount');
@@ -284,7 +284,7 @@ class PopupManager {
     const screenshotsContainer = document.getElementById('screenshotsList');
     if (!screenshotsContainer) return;
     
-    const screenshotOps = operations.filter(op => op.type === 'click' && op.screenshot);
+    const screenshotOps = operations.filter(op => op.screenshot);
     
     this.clearElement(screenshotsContainer);
     
@@ -317,15 +317,17 @@ class PopupManager {
       textContent: stepNumber.toString()
     });
     
+    const rawUrl = op.url || '无可用地址';
+    const displayUrl = rawUrl.length > 50 ? rawUrl.substring(0, 50) + '...' : rawUrl;
     const urlSpan = this.createElement('span', {
       className: 'screenshot-url',
-      textContent: `当前地址：${op.url.length > 50 ? op.url.substring(0, 50) + '...' : op.url}`,
-      attributes: { title: op.url }
+      textContent: `当前地址：${displayUrl}`,
+      attributes: { title: rawUrl }
     });
     
     const playButton = this.createElement('button', {
       className: 'play-button',
-      attributes: { 'data-url': op.url, title: '跳转到此页面' }
+      attributes: { 'data-url': op.url || '', title: '跳转到此页面' }
     });
     
     playButton.appendChild(this.createPlayIcon());
@@ -347,10 +349,16 @@ class PopupManager {
       className: 'screenshot-info'
     });
     
+    const isLongScreenshot = op.type === 'long_screenshot';
     const textP = this.createElement('p');
-    const textStrong = this.createElement('strong', { textContent: '点击内容: ' });
+    const textStrong = this.createElement('strong', { textContent: isLongScreenshot ? '截图类型: ' : '点击内容: ' });
     textP.appendChild(textStrong);
-    textP.appendChild(document.createTextNode(`"${op.text || '无文本'}"`));
+    const description = isLongScreenshot
+      ? (op.meta && typeof op.meta.height === 'number'
+          ? `整页截图 · 高度约 ${Math.round(op.meta.height)}px`
+          : '整页截图')
+      : `"${op.text || '无文本'}"`;
+    textP.appendChild(document.createTextNode(description));
     
     const timeP = this.createElement('p');
     const timeStrong = this.createElement('strong', { textContent: '时间: ' });
@@ -358,6 +366,11 @@ class PopupManager {
     timeP.appendChild(document.createTextNode(new Date(op.timestamp).toLocaleString()));
     
     info.appendChild(textP);
+    if (isLongScreenshot && op.meta && typeof op.meta.segments === 'number') {
+      const metaP = this.createElement('p');
+      metaP.textContent = `段数：${op.meta.segments}`;
+      info.appendChild(metaP);
+    }
     info.appendChild(timeP);
     
     content.appendChild(img);
@@ -545,19 +558,24 @@ class PopupManager {
         <p>生成时间: ${new Date().toLocaleString()}</p>
     </div>`;
     
-    operations.forEach((op, index) => {
-      if (op.type === 'click' && op.screenshot) {
-        html += `
+    const screenshotOps = operations.filter(op => op.screenshot);
+    screenshotOps.forEach((op, index) => {
+      const isLongScreenshot = op.type === 'long_screenshot';
+      const description = isLongScreenshot
+        ? (op.meta && typeof op.meta.height === 'number'
+            ? `整页截图 · 高度约 ${Math.round(op.meta.height)}px`
+            : '整页截图')
+        : `点击 "${op.text || '无文本'}"`;
+      html += `
     <div class="step">
         <div class="step-title">步骤 ${index + 1}</div>
         <img src="${op.screenshot}" alt="步骤${index + 1}截图" class="step-image">
         <div class="step-info">
-            <p><strong>操作:</strong> 点击 "${op.text || '无文本'}"</p>
-            <p><strong>页面:</strong> ${op.url}</p>
-            <p><strong>时间:</strong> ${new Date(op.timestamp).toLocaleString()}</p>
+            <p><strong>${isLongScreenshot ? '截图类型' : '操作'}:</strong> ${description}</p>
+            <p><strong>页面:</strong> ${op.url || '无可用地址'}</p>
+            <p><strong>时间:</strong> ${op.timestamp ? new Date(op.timestamp).toLocaleString() : '未知'}</p>
         </div>
     </div>`;
-      }
     });
     
     html += `

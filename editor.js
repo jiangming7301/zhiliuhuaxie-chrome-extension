@@ -18,9 +18,12 @@ class ScreenshotEditor {
         this.originalImageHeight = null;
         this.currentScale = 1;
         this.backgroundImage = null;
+        this.backgroundImageSource = null;
         this.canvasStates = {};
         this.historyStack = [];
         this.redoStack = [];
+        this.localStorageLimited = localStorage.getItem('editorDataTrimmed') === 'true';
+        this.storageWarningShown = this.localStorageLimited;
 
         // 防止无限保存循环
         this.isSaving = false;
@@ -169,7 +172,7 @@ class ScreenshotEditor {
     async loadProjectData() {
         try {
             // 首先尝试从localStorage获取编辑器数据（由popup.js传递）
-            const sessionEditorDataStr = sessionStorage.getItem('editorData');
+            const sessionEditorDataStr = this.localStorageLimited ? null : sessionStorage.getItem('editorData');
             if (sessionEditorDataStr) {
                 const editorData = JSON.parse(sessionEditorDataStr);
                 this.screenshots = editorData.operations || [];
@@ -181,47 +184,57 @@ class ScreenshotEditor {
             const editorDataStr = localStorage.getItem('editorData');
             if (editorDataStr) {
                 const editorData = JSON.parse(editorDataStr);
-                // 使用传递的所有截图数据
                 this.screenshots = editorData.operations || [];
                 this.currentScreenshotIndex = editorData.currentIndex || 0;
-                this.originalScreenshotIndex = editorData.currentIndex; // 保存原始索引用于保存时定位
+                this.originalScreenshotIndex = editorData.currentIndex;
 
-                // 将初始数据持久化到 localStorage/sessionStorage，确保刷新可恢复
-                try {
-                    localStorage.setItem('operations', JSON.stringify(this.screenshots));
-                    localStorage.setItem('hasEditedContent', 'false');
-                    sessionStorage.setItem('editorData', editorDataStr);
-                    localStorage.setItem('editorData', editorDataStr);
-                } catch (err) {
-                    console.warn('写入localStorage失败:', err);
+                if (!this.localStorageLimited) {
+                    try {
+                        localStorage.setItem('operations', JSON.stringify(this.screenshots));
+                        localStorage.setItem('hasEditedContent', 'false');
+                        sessionStorage.setItem('editorData', editorDataStr);
+                        localStorage.setItem('editorData', editorDataStr);
+                    } catch (err) {
+                        console.warn('写入localStorage失败:', err);
+                        if (this.isQuotaExceededError(err)) {
+                            const snapshot = {
+                                operations: this.screenshots,
+                                currentIndex: this.currentScreenshotIndex
+                            };
+                            this.handleLocalStorageQuotaExceeded(snapshot, this.screenshots);
+                        }
+                    }
                 }
                 
                 return;
             }
             
-            // 从URL参数获取截图索引（备用方案）
             const urlParams = new URLSearchParams(window.location.search);
             const screenshotIndex = urlParams.get('screenshot');
+            let storedEditorIndex = null;
             
-            // 检查是否在Chrome扩展环境中
             if (typeof chrome !== 'undefined' && chrome.storage) {
-                // 从存储中加载当前操作数据
-                const result = await chrome.storage.local.get(['operations']);
-            this.projectData = result.operations || [];
-            if ((!this.projectData || this.projectData.length === 0) && sessionStorage.getItem('editorData')) {
-                const cached = JSON.parse(sessionStorage.getItem('editorData'));
-                this.projectData = cached.operations || [];
-            } else if ((!this.projectData || this.projectData.length === 0) && localStorage.getItem('operations')) {
-                this.projectData = JSON.parse(localStorage.getItem('operations'));
-            }
-            console.log('从Chrome存储加载了数据:', this.projectData.length, '个操作');
+                try {
+                    const result = await chrome.storage.local.get(['operations', 'editorCurrentIndex']);
+                    this.projectData = result.operations || [];
+                    if ((!this.projectData || this.projectData.length === 0) && !this.localStorageLimited && sessionStorage.getItem('editorData')) {
+                        const cached = JSON.parse(sessionStorage.getItem('editorData'));
+                        this.projectData = cached.operations || [];
+                    } else if ((!this.projectData || this.projectData.length === 0) && localStorage.getItem('operations')) {
+                        this.projectData = JSON.parse(localStorage.getItem('operations'));
+                    }
+                    storedEditorIndex = Number.isInteger(result.editorCurrentIndex) ? result.editorCurrentIndex : null;
+                    console.log('从Chrome存储加载了数据:', this.projectData.length, '个操作');
+                } catch (storageError) {
+                    console.warn('从Chrome存储获取数据失败:', storageError);
+                    this.projectData = this.projectData || [];
+                }
 
-                // 检查是否有editData
-            const withEditData = this.projectData.filter(op => op.editData);
-            console.log('包含editData的操作:', withEditData.length, '个');
+                const withEditData = this.projectData.filter(op => op.editData);
+                console.log('包含editData的操作:', withEditData.length, '个');
 
-            if (withEditData.length > 0) {
-                withEditData.forEach((op, index) => {
+                if (withEditData.length > 0) {
+                    withEditData.forEach((op, index) => {
                         console.log(`操作 ${index + 1} editData:`, {
                             hasCanvas: !!op.editData.canvas,
                             hasTextBlocks: !!op.editData.textBlocks,
@@ -230,30 +243,27 @@ class ScreenshotEditor {
                     });
                 }
             } else {
-                // 普通网页环境：优先从 sessionStorage / localStorage 读取持久化数据
-                const sessionCache = sessionStorage.getItem('editorData');
-                const persistedIndexStr = localStorage.getItem('editorCurrentIndex');
+                const sessionCache = this.localStorageLimited ? null : sessionStorage.getItem('editorData');
         if (sessionCache) {
             const cacheData = JSON.parse(sessionCache);
             this.projectData = cacheData.operations || [];
             this.currentScreenshotIndex = cacheData.currentIndex || 0;
             console.log('从sessionStorage加载了数据:', this.projectData.length, '个操作');
         } else {
-            const operationsStr = localStorage.getItem('operations');
-            if (operationsStr) {
-                this.projectData = JSON.parse(operationsStr);
-                console.log('从localStorage加载了数据:', this.projectData.length, '个操作');
-            } else {
-                // 回退到模拟数据（仅在无数据时）
-                this.projectData = this.getMockData();
-                console.log('未找到本地数据，使用模拟数据');
-            }
-        }
-                // 读取持久化的当前索引
+                    const operationsStr = localStorage.getItem('operations');
+                    if (operationsStr) {
+                        this.projectData = JSON.parse(operationsStr);
+                        console.log('从localStorage加载了数据:', this.projectData.length, '个操作');
+                    } else {
+                        this.projectData = this.getMockData();
+                        console.log('未找到本地数据，使用模拟数据');
+                    }
+                }
+                const persistedIndexStr = localStorage.getItem('editorCurrentIndex');
                 if (persistedIndexStr !== null) {
                     const persistedIndex = parseInt(persistedIndexStr, 10);
                     if (!Number.isNaN(persistedIndex)) {
-                        this.currentScreenshotIndex = persistedIndex;
+                        storedEditorIndex = persistedIndex;
                     }
                 }
             }
@@ -299,22 +309,32 @@ class ScreenshotEditor {
                     if (index >= 0 && index < allScreenshots.length) {
                         this.screenshots = [allScreenshots[index]];
                         this.currentScreenshotIndex = 0;
-                    this.originalScreenshotIndex = index; // 保存原始索引用于保存时定位
-                } else {
-                    throw new Error('指定的截图索引无效');
-                }
+                        this.originalScreenshotIndex = index;
+                    } else {
+                        throw new Error('指定的截图索引无效');
+                    }
                 } else {
                     this.screenshots = allScreenshots;
-                    this.currentScreenshotIndex = 0;
+                    if (storedEditorIndex !== null && storedEditorIndex >= 0 && storedEditorIndex < allScreenshots.length) {
+                        this.currentScreenshotIndex = storedEditorIndex;
+                    } else {
+                        this.currentScreenshotIndex = 0;
+                    }
+                    this.originalScreenshotIndex = this.currentScreenshotIndex;
                 }
 
-                try {
-                    sessionStorage.setItem('editorData', JSON.stringify({
-                        operations: this.screenshots,
-                        currentIndex: this.currentScreenshotIndex
-                    }));
-                } catch (err) {
-                    console.warn('缓存编辑器数据失败:', err);
+                if (!this.localStorageLimited) {
+                    try {
+                        sessionStorage.setItem('editorData', JSON.stringify({
+                            operations: this.screenshots,
+                            currentIndex: this.currentScreenshotIndex
+                        }));
+                    } catch (err) {
+                        console.warn('缓存编辑器数据失败:', err);
+                        if (this.isQuotaExceededError(err)) {
+                            this.activateLightweightMode(false);
+                        }
+                    }
                 }
             
         } catch (error) {
@@ -766,6 +786,53 @@ class ScreenshotEditor {
         }
     }
 
+    handleKeyboard(event) {
+        const target = event.target;
+        const isEditable = target && (
+            target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.isContentEditable
+        );
+        if (isEditable) {
+            return;
+        }
+
+        const key = event.key.toLowerCase();
+        const ctrl = event.ctrlKey || event.metaKey;
+
+        if (ctrl && key === 'z' && !event.shiftKey) {
+            event.preventDefault();
+            this.undo();
+            return;
+        }
+
+        if ((ctrl && key === 'z' && event.shiftKey) || (ctrl && key === 'y')) {
+            event.preventDefault();
+            this.redo();
+            return;
+        }
+
+        if (event.key === 'Delete' || event.key === 'Backspace') {
+            event.preventDefault();
+            this.deleteSelectedAnnotations();
+            return;
+        }
+    }
+
+    addBackgroundImageToCanvas() {
+        if (!this.canvas || !this.backgroundImage) {
+            return;
+        }
+        const objects = this.canvas.getObjects();
+        const stale = objects.filter(obj => obj.isBackgroundImage && obj !== this.backgroundImage);
+        stale.forEach(obj => this.canvas.remove(obj));
+        if (!objects.includes(this.backgroundImage)) {
+            this.canvas.add(this.backgroundImage);
+        }
+        this.canvas.sendToBack(this.backgroundImage);
+        this.canvas.renderAll();
+    }
+
     initializeDragAndDrop() {
         const screenshotsList = document.getElementById('screenshotsList');
         if (!screenshotsList || typeof Sortable === 'undefined') {
@@ -816,6 +883,37 @@ class ScreenshotEditor {
             return this.screenshots[this.currentScreenshotIndex].markdownContent || '';
         }
         return '';
+    }
+
+    switchMarkdownMode(mode = 'edit') {
+        const normalized = mode === 'preview' ? 'preview' : 'edit';
+        const editBtn = document.getElementById('editModeBtn');
+        const previewBtn = document.getElementById('previewModeBtn');
+        const editor = document.getElementById('markdownEditor');
+        const preview = document.getElementById('markdownPreview');
+        const content = document.getElementById('markdownContent');
+
+        if (!editBtn || !previewBtn || !editor || !preview || !content) {
+            return;
+        }
+
+        editBtn.classList.toggle('active', normalized === 'edit');
+        previewBtn.classList.toggle('active', normalized === 'preview');
+
+        if (normalized === 'edit') {
+            editor.style.display = 'block';
+            preview.style.display = 'none';
+            return;
+        }
+
+        const markdownText = this.getCurrentMarkdownContent() || '';
+        if (window.marked && typeof window.marked.parse === 'function') {
+            content.innerHTML = window.marked.parse(markdownText);
+        } else {
+            content.innerHTML = markdownText.replace(/\n/g, '<br>');
+        }
+        preview.style.display = 'block';
+        editor.style.display = 'none';
     }
 
     generateDefaultMarkdown(screenshot, index = 0) {
@@ -1096,9 +1194,6 @@ class ScreenshotEditor {
         // 切换步骤时标记正在加载，避免过程中触发保存
         this.isLoadingSnapshot = true;
 
-        // 每次切换步骤都重建画布实例，保证互相隔离
-        this.resetCanvasInstance();
-
         // 如果该截图还没有 editData，但在内存缓存里有，就补回
         if (!screenshot.editData && this.canvasStates[currentStepId]) {
             screenshot.editData = this.canvasStates[currentStepId];
@@ -1115,6 +1210,11 @@ class ScreenshotEditor {
         };
 
         this.canvas.clear();
+        this.backgroundImage = null;
+        this.backgroundImageSource = null;
+        if (this.canvas) {
+            this.canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+        }
         this.canvas.renderAll();
         // 切换截图时默认清空文本块，避免沿用上一张的标注
         this.textBlocks = [];
@@ -1126,49 +1226,47 @@ class ScreenshotEditor {
                 return;
             }
             // 调整画布大小以适应图片
-            const maxWidth = 1200;
-            const maxHeight = 800;
-            const scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+            const container = document.getElementById('canvasContainer');
+            const containerWidth = container ? Math.max(320, container.clientWidth - 40) : 1200;
+            const scale = Math.min(containerWidth / img.width, 1);
+            const scaledWidth = img.width * scale;
+            const scaledHeight = img.height * scale;
 
-            this.canvas.setWidth(img.width * scale);
-            this.canvas.setHeight(img.height * scale);
+            this.canvas.setWidth(scaledWidth);
+            this.canvas.setHeight(scaledHeight);
 
             img.scale(scale);
             img.set({
                 left: 0,
                 top: 0,
+                originX: 'left',
+                originY: 'top',
                 selectable: false,
                 evented: false,
-                // 为了避免保存时把背景一起序列化，关闭对象缓存并显式标记
                 objectCaching: false,
-                // 添加必要属性以确保正确序列化
                 src: screenshot.screenshot,
                 crossOrigin: 'anonymous',
                 excludeFromExport: true,
                 isBackgroundImage: true
             });
 
-            // 存储图片信息到实例变量
             this.originalImageWidth = img.width;
             this.originalImageHeight = img.height;
             this.currentScale = scale;
             this.backgroundImage = img;
-            this.markObjectStep(img, currentStepId);
-
-            this.canvas.add(img);
-            this.canvas.sendToBack(img);
-            this.canvas.renderAll();
+            this.backgroundImageSource = screenshot.screenshot;
 
             // 延迟加载编辑数据，确保背景图片已完全加载
             if (screenshot.editData) {
                 setTimeout(() => {
                     if (this.activeCanvasLoadToken !== loadToken) return;
-                    this.loadEditData(screenshot.editData, img, screenshot, loadToken, currentStepId, finishLoading);
+                    this.loadEditData(screenshot.editData, screenshot, loadToken, currentStepId, finishLoading);
                 }, 100);
             } else {
                 // 没有编辑数据时确保状态被清空
                 this.textBlocks = [];
                 this.removeForeignObjects(currentStepId);
+                this.addBackgroundImageToCanvas();
                 finishLoading();
             }
 
@@ -1177,7 +1275,7 @@ class ScreenshotEditor {
     }
 
     // 加载编辑数据
-    loadEditData(editData, backgroundImage, screenshot, loadToken, stepId, onComplete = () => {}) {
+    loadEditData(editData, screenshot, loadToken, stepId, onComplete = () => {}) {
         if (editData) {
             console.log('正在加载编辑数据...', {
                 savedCanvasWidth: editData.canvasWidth,
@@ -1219,22 +1317,12 @@ class ScreenshotEditor {
                     const screenshotSrc = screenshot ? screenshot.screenshot : null;
                     if (screenshotSrc) {
                         const legacyBackgrounds = this.canvas.getObjects().filter(obj =>
-                            obj !== backgroundImage &&
                             obj.type === 'image' &&
                             obj.src === screenshotSrc
                         );
                         legacyBackgrounds.forEach(obj => this.canvas.remove(obj));
                     }
 
-                    // 确保背景图片在最后且存在于画布
-                    if (backgroundImage) {
-                        const objects = this.canvas.getObjects();
-                            const containsBackground = objects.includes(backgroundImage);
-                            if (!containsBackground) {
-                                this.canvas.add(backgroundImage);
-                            }
-                        this.canvas.sendToBack(backgroundImage);
-                    }
                     this.canvas.renderAll();
                     this.canvas.getObjects().forEach(obj => this.markObjectStep(obj, stepId));
                     this.removeForeignObjects(stepId);
@@ -1290,11 +1378,13 @@ class ScreenshotEditor {
                         hasAnnotations: hasNonImageObjects,
                         annotationTypes: this.canvas.getObjects().filter(obj => obj.type !== 'image').map(obj => obj.type)
                     });
+                    this.addBackgroundImageToCanvas();
                     onComplete();
                 });
             } else {
                 this.textBlocks = [];
                 this.removeForeignObjects(stepId);
+                this.addBackgroundImageToCanvas();
                 onComplete();
             }
 
@@ -2161,12 +2251,14 @@ class ScreenshotEditor {
                     editedVersions: versions,
                     [`edited_${versionId}`]: versionData
                 });
-            } else {
+            } else if (!this.localStorageLimited) {
                 const existing = localStorage.getItem('editedVersions');
                 const versions = existing ? JSON.parse(existing) : [];
                 versions.unshift({ id: versionId, name: versionName, timestamp: versionData.timestamp });
                 localStorage.setItem('editedVersions', JSON.stringify(versions));
                 localStorage.setItem(`edited_${versionId}`, JSON.stringify(versionData));
+            } else {
+                this.showMessage('浏览器缓存空间不足，无法在本地保存历史版本。', 'error');
             }
 
             this.showSuccess('版本保存成功！');
@@ -2215,19 +2307,26 @@ class ScreenshotEditor {
                 currentIndex: this.currentScreenshotIndex
             };
 
-            // 本地持久化，确保刷新时可恢复
-            try {
-                sessionStorage.setItem('editorData', JSON.stringify(editorSnapshot));
-            } catch (err) {
-                console.warn('写入sessionStorage失败:', err);
-            }
-            try {
-                localStorage.setItem('editorData', JSON.stringify(editorSnapshot));
-                localStorage.setItem('operations', JSON.stringify(operationsSnapshot));
-                localStorage.setItem('hasEditedContent', 'true');
-                localStorage.setItem('lastEditTime', Date.now().toString());
-            } catch (err) {
-                console.warn('写入localStorage失败:', err);
+            if (!this.localStorageLimited) {
+                try {
+                    sessionStorage.setItem('editorData', JSON.stringify(editorSnapshot));
+                } catch (err) {
+                    console.warn('写入sessionStorage失败:', err);
+                    if (this.isQuotaExceededError(err)) {
+                        this.activateLightweightMode(false);
+                    }
+                }
+                try {
+                    localStorage.setItem('editorData', JSON.stringify(editorSnapshot));
+                    localStorage.setItem('operations', JSON.stringify(operationsSnapshot));
+                    localStorage.setItem('hasEditedContent', 'true');
+                    localStorage.setItem('lastEditTime', Date.now().toString());
+                } catch (err) {
+                    console.warn('写入localStorage失败:', err);
+                    if (this.isQuotaExceededError(err)) {
+                        this.handleLocalStorageQuotaExceeded(editorSnapshot, operationsSnapshot);
+                    }
+                }
             }
 
             if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -2246,6 +2345,82 @@ class ScreenshotEditor {
         } catch (error) {
             console.error('同步数据到主存储失败:', error);
         }
+    }
+
+    isQuotaExceededError(error) {
+        if (!error) {
+            return false;
+        }
+        if (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+            return true;
+        }
+        if (typeof error.code === 'number' && (error.code === 22 || error.code === 1014)) {
+            return true;
+        }
+        return typeof error.message === 'string' && error.message.includes('QuotaExceededError');
+    }
+
+    activateLightweightMode(showPrompt = true) {
+        if (this.localStorageLimited) {
+            return;
+        }
+        this.localStorageLimited = true;
+        try {
+            localStorage.setItem('editorDataTrimmed', 'true');
+        } catch (err) {
+            console.warn('写入editorDataTrimmed失败:', err);
+        }
+        try {
+            sessionStorage.removeItem('editorData');
+        } catch (err) {
+            console.warn('清理sessionStorage失败:', err);
+        }
+        if (showPrompt && !this.storageWarningShown) {
+            this.storageWarningShown = true;
+            this.showMessage('浏览器缓存空间不足，已改用精简模式保存。完整截图依旧保存在插件记录中。', 'error');
+        }
+    }
+
+    handleLocalStorageQuotaExceeded(editorSnapshot, operationsSnapshot) {
+        console.warn('localStorage空间不足，启用精简保存模式');
+        this.activateLightweightMode(true);
+        try {
+            localStorage.removeItem('editorData');
+            localStorage.removeItem('operations');
+            sessionStorage.removeItem('editorData');
+        } catch (cleanupError) {
+            console.warn('清理localStorage失败:', cleanupError);
+        }
+
+        try {
+            const lightweightOps = operationsSnapshot.map(op => {
+                const { screenshot, editData, ...rest } = op || {};
+                const trimmed = { ...rest, hasScreenshot: !!screenshot };
+                if (editData) {
+                    trimmed.editDataMeta = {
+                        canvasWidth: editData.canvasWidth,
+                        canvasHeight: editData.canvasHeight,
+                        scale: editData.scale,
+                        lastModified: editData.lastModified
+                    };
+                }
+                return trimmed;
+            });
+
+            const lightweightSnapshot = {
+                ...editorSnapshot,
+                operations: lightweightOps
+            };
+
+            localStorage.setItem('editorDataLight', JSON.stringify(lightweightSnapshot));
+            localStorage.setItem('operationsLight', JSON.stringify(lightweightOps));
+            localStorage.setItem('editorDataTrimmed', 'true');
+            localStorage.setItem('lastEditTime', Date.now().toString());
+        } catch (lightError) {
+            console.error('精简模式写入仍失败:', lightError);
+        }
+
+        this.storageWarningShown = true;
     }
 
 
