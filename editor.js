@@ -1025,7 +1025,20 @@ class ScreenshotEditor {
             targetStack.push(previousState);
         }
         this.isLoadingSnapshot = true;
-        this.canvas.loadFromJSON(snapshot, () => {
+        let payload;
+        if (typeof snapshot === 'string') {
+            try {
+                payload = JSON.parse(snapshot);
+            } catch (err) {
+                console.warn('解析历史快照失败:', err);
+                this.isLoadingSnapshot = false;
+                return;
+            }
+        } else {
+            payload = JSON.parse(JSON.stringify(snapshot));
+        }
+        this.normalizeFabricCanvasData(payload);
+        this.canvas.loadFromJSON(payload, () => {
             this.canvas.renderAll();
             this.isLoadingSnapshot = false;
             this.saveCurrentEditState();
@@ -1350,6 +1363,7 @@ class ScreenshotEditor {
                 }
                 // 克隆数据，避免 loadFromJSON 过程中修改原始引用
                 const canvasPayload = JSON.parse(JSON.stringify(editData.canvas));
+                this.normalizeFabricCanvasData(canvasPayload);
                 this.canvas.loadFromJSON(canvasPayload, () => {
                     if (loadToken && this.activeCanvasLoadToken !== loadToken) {
                         return;
@@ -1443,6 +1457,52 @@ class ScreenshotEditor {
             this.removeForeignObjects(stepId);
             onComplete();
         }
+    }
+
+    normalizeFabricCanvasData(canvasData) {
+        if (!canvasData || typeof canvasData !== 'object') {
+            return canvasData;
+        }
+        const validBaselines = new Set(['top', 'hanging', 'middle', 'alphabetic', 'ideographic', 'bottom']);
+        const normalizeBaseline = (value) => {
+            if (typeof value !== 'string') {
+                return null;
+            }
+            const lower = value.toLowerCase();
+            return validBaselines.has(lower) ? lower : 'alphabetic';
+        };
+        const processObject = (obj) => {
+            if (!obj || typeof obj !== 'object') {
+                return;
+            }
+            if (typeof obj.textBaseline === 'string') {
+                obj.textBaseline = normalizeBaseline(obj.textBaseline);
+            }
+            if (obj.styles && typeof obj.styles === 'object') {
+                Object.values(obj.styles).forEach(lineStyles => {
+                    if (lineStyles && typeof lineStyles === 'object') {
+                        Object.values(lineStyles).forEach(style => {
+                            if (style && typeof style.textBaseline === 'string') {
+                                style.textBaseline = normalizeBaseline(style.textBaseline);
+                            }
+                        });
+                    }
+                });
+            }
+            if (Array.isArray(obj.objects)) {
+                obj.objects.forEach(processObject);
+            }
+            if (obj.clipPath) {
+                processObject(obj.clipPath);
+            }
+        };
+        if (Array.isArray(canvasData.objects)) {
+            canvasData.objects.forEach(processObject);
+        }
+        if (canvasData.backgroundImage) {
+            processObject(canvasData.backgroundImage);
+        }
+        return canvasData;
     }
 
     // 工具选择

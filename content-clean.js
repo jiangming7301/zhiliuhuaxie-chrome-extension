@@ -1157,11 +1157,11 @@ class LongScreenshotManager {
     this.canceled = false;
     this.sessionId = null;
     this.segmentOverlap = 60;
-    this.captureDelay = 600;
-    this.additionalStabilityDelay = 250;
+    this.captureDelay = 1000;
+    this.additionalStabilityDelay = 400;
     this.maxStabilityChecks = 5;
-    this.pendingImageCheckInterval = 200;
-    this.pendingImageTimeout = 4000;
+    this.pendingImageCheckInterval = 250;
+    this.pendingImageTimeout = 6000;
     this.maxCanvasDimension = 32760;
     this.scrollingElement = document.scrollingElement || document.documentElement || document.body;
     this.fixedHeaderHeight = 0;

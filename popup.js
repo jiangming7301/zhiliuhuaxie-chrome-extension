@@ -681,6 +681,7 @@ class PopupController {
           if (cleaned.objects) {
             cleaned.objects = cleaned.objects.filter(o => o.type !== 'image');
           }
+          this.normalizeFabricCanvasData(cleaned);
 
           await new Promise(resolveLoad => {
             tempFabric.loadFromJSON(cleaned, () => {
@@ -1132,6 +1133,55 @@ class PopupController {
     }
   }
 
+  normalizeFabricCanvasData(canvasData) {
+    if (!canvasData || typeof canvasData !== 'object') {
+      return canvasData;
+    }
+    const validBaselines = new Set(['top', 'hanging', 'middle', 'alphabetic', 'ideographic', 'bottom']);
+    const normalizeBaseline = (value) => {
+      if (typeof value !== 'string') {
+        return null;
+      }
+      const lower = value.toLowerCase();
+      if (validBaselines.has(lower)) {
+        return lower;
+      }
+      return 'alphabetic';
+    };
+    const processObject = (obj) => {
+      if (!obj || typeof obj !== 'object') {
+        return;
+      }
+      if (typeof obj.textBaseline === 'string') {
+        obj.textBaseline = normalizeBaseline(obj.textBaseline);
+      }
+      if (obj.styles && typeof obj.styles === 'object') {
+        Object.values(obj.styles).forEach(lineStyles => {
+          if (lineStyles && typeof lineStyles === 'object') {
+            Object.values(lineStyles).forEach(style => {
+              if (style && typeof style.textBaseline === 'string') {
+                style.textBaseline = normalizeBaseline(style.textBaseline);
+              }
+            });
+          }
+        });
+      }
+      if (Array.isArray(obj.objects)) {
+        obj.objects.forEach(processObject);
+      }
+      if (obj.clipPath) {
+        processObject(obj.clipPath);
+      }
+    };
+    if (Array.isArray(canvasData.objects)) {
+      canvasData.objects.forEach(processObject);
+    }
+    if (canvasData.backgroundImage) {
+      processObject(canvasData.backgroundImage);
+    }
+    return canvasData;
+  }
+
   bindRerecordButtonEvents() {
     const rerecordButtons = document.querySelectorAll('.rerecord-button');
     rerecordButtons.forEach(button => {
@@ -1457,6 +1507,7 @@ class PopupController {
               if (cleanedCanvasData.objects) {
                 cleanedCanvasData.objects = cleanedCanvasData.objects.filter(obj => obj.type !== 'image');
               }
+              this.normalizeFabricCanvasData(cleanedCanvasData);
               this.fabricCanvas.loadFromJSON(cleanedCanvasData, () => {
                 this.fabricCanvas.renderAll();
               });
