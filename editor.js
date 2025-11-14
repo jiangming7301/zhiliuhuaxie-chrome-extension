@@ -24,6 +24,7 @@ class ScreenshotEditor {
         this.canvasStates = {};
         this.historyStack = [];
         this.redoStack = [];
+        this.lastCanvasState = null;
         this.localStorageLimited = localStorage.getItem('editorDataTrimmed') === 'true';
         this.storageWarningShown = this.localStorageLimited;
 
@@ -487,6 +488,7 @@ class ScreenshotEditor {
 
     resetCanvasInstance() {
         this.isResettingCanvas = true;
+        this.lastCanvasState = null;
         if (this.canvas) {
             this.canvas.dispose();
         }
@@ -668,7 +670,9 @@ class ScreenshotEditor {
         document.getElementById('textTool').addEventListener('click', () => this.selectTool('text'));
         document.getElementById('rectangleTool').addEventListener('click', () => this.selectTool('rectangle'));
         document.getElementById('circleTool').addEventListener('click', () => this.selectTool('circle'));
-        document.getElementById('arrowTool').addEventListener('click', () => this.selectTool('arrow'));
+        document.getElementById('arrowTool').addEventListener('click', async () => {
+            await this.handleArrowToolSelection();
+        });
         document.getElementById('penTool').addEventListener('click', () => this.selectTool('pen'));
         document.getElementById('lineTool').addEventListener('click', () => this.selectTool('line'));
         document.getElementById('highlighterTool').addEventListener('click', () => this.selectTool('highlighter'));
@@ -887,7 +891,10 @@ class ScreenshotEditor {
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
             dragClass: 'sortable-drag',
-            onEnd: (evt) => this.reorderScreenshots(evt.oldIndex, evt.newIndex)
+            onEnd: (evt) => {
+                Promise.resolve(this.reorderScreenshots(evt.oldIndex, evt.newIndex))
+                    .catch(err => console.error('重新排序截图失败:', err));
+            }
         });
     }
 
@@ -968,44 +975,11 @@ class ScreenshotEditor {
         return lines.join('\n');
     }
 
-    pushHistorySnapshot(clearRedo = true) {
-        if (!this.canvas || this.isLoadingSnapshot) {
-            return;
+    getCanvasStateSnapshot() {
+        if (!this.canvas) {
+            return null;
         }
-        try {
-            const snapshot = this.canvas.toJSON([
-                'src',
-                'crossOrigin',
-                'selectable',
-                'evented',
-                'layerId',
-                '__stepId',
-                'name',
-                'id',
-                'strokeUniform',
-                'pathOffset',
-                'rx',
-                'ry',
-                'points',
-                'data'
-            ]);
-            this.historyStack.push(snapshot);
-            if (this.historyStack.length > 50) {
-                this.historyStack.shift();
-            }
-            if (clearRedo) {
-                this.redoStack = [];
-            }
-        } catch (error) {
-            console.warn('记录历史快照失败:', error);
-        }
-    }
-
-    restoreFromSnapshot(snapshot, targetStack) {
-        if (!snapshot || !this.canvas) {
-            return;
-        }
-        const previousState = this.canvas ? this.canvas.toJSON([
+        return this.canvas.toJSON([
             'src',
             'crossOrigin',
             'selectable',
@@ -1019,10 +993,47 @@ class ScreenshotEditor {
             'rx',
             'ry',
             'points',
-            'data'
-        ]) : null;
-        if (targetStack && previousState) {
-            targetStack.push(previousState);
+            'data',
+            'isBackgroundImage'
+        ]);
+    }
+
+    storeCurrentCanvasStateForHistory() {
+        try {
+            this.lastCanvasState = this.getCanvasStateSnapshot();
+        } catch (error) {
+            console.warn('记录画布基线失败:', error);
+        }
+    }
+
+    pushHistorySnapshot(clearRedo = true) {
+        if (!this.canvas || this.isLoadingSnapshot || this.isResettingCanvas) {
+            return;
+        }
+        try {
+            if (this.lastCanvasState) {
+                const previousState = JSON.parse(JSON.stringify(this.lastCanvasState));
+                this.historyStack.push(previousState);
+                if (this.historyStack.length > 50) {
+                    this.historyStack.shift();
+                }
+                if (clearRedo) {
+                    this.redoStack = [];
+                }
+            }
+            this.lastCanvasState = this.getCanvasStateSnapshot();
+        } catch (error) {
+            console.warn('记录历史快照失败:', error);
+        }
+    }
+
+    restoreFromSnapshot(snapshot, targetStack) {
+        if (!snapshot || !this.canvas) {
+            return;
+        }
+        const currentState = this.getCanvasStateSnapshot();
+        if (targetStack && currentState) {
+            targetStack.push(JSON.parse(JSON.stringify(currentState)));
         }
         this.isLoadingSnapshot = true;
         let payload;
@@ -1042,6 +1053,7 @@ class ScreenshotEditor {
             this.canvas.renderAll();
             this.isLoadingSnapshot = false;
             this.saveCurrentEditState();
+            this.storeCurrentCanvasStateForHistory();
         });
     }
 
@@ -1051,10 +1063,10 @@ class ScreenshotEditor {
             return;
         }
         const snapshot = this.historyStack.pop();
-        const currentSnapshot = this.canvas.toJSON([
-            'src','crossOrigin','selectable','evented','layerId','__stepId','name','id','strokeUniform','pathOffset','rx','ry','points','data'
-        ]);
-        this.redoStack.push(currentSnapshot);
+        const currentState = this.getCanvasStateSnapshot();
+        if (currentState) {
+            this.redoStack.push(JSON.parse(JSON.stringify(currentState)));
+        }
         this.restoreFromSnapshot(snapshot);
     }
 
@@ -1064,10 +1076,10 @@ class ScreenshotEditor {
             return;
         }
         const snapshot = this.redoStack.pop();
-        const currentSnapshot = this.canvas.toJSON([
-            'src','crossOrigin','selectable','evented','layerId','__stepId','name','id','strokeUniform','pathOffset','rx','ry','points','data'
-        ]);
-        this.historyStack.push(currentSnapshot);
+        const currentState = this.getCanvasStateSnapshot();
+        if (currentState) {
+            this.historyStack.push(JSON.parse(JSON.stringify(currentState)));
+        }
         this.restoreFromSnapshot(snapshot);
     }
 
@@ -1170,6 +1182,9 @@ class ScreenshotEditor {
         const screenshot = this.screenshots[index];
         const screenshotStepId = this.ensureScreenshotId(screenshot, index);
 
+        // 选择截图会触发编辑器重置，默认为选择工具
+        this.selectTool('select');
+
         // 加载截图到画布
         this.loadScreenshotToCanvas(screenshot, screenshotStepId);
         this.historyStack = [];
@@ -1245,6 +1260,7 @@ class ScreenshotEditor {
 
         // 切换步骤时标记正在加载，避免过程中触发保存
         this.isLoadingSnapshot = true;
+        this.lastCanvasState = null;
 
         // 如果该截图还没有 editData，但在内存缓存里有，就补回
         if (!screenshot.editData && this.canvasStates[currentStepId]) {
@@ -1257,7 +1273,7 @@ class ScreenshotEditor {
         const finishLoading = () => {
             if (this.activeCanvasLoadToken === loadToken) {
                 this.isLoadingSnapshot = false;
-                this.pushHistorySnapshot(false);
+                this.storeCurrentCanvasStateForHistory();
             }
         };
 
@@ -1300,7 +1316,6 @@ class ScreenshotEditor {
                 objectCaching: false,
                 src: screenshot.screenshot,
                 crossOrigin: 'anonymous',
-                excludeFromExport: true,
                 isBackgroundImage: true
             });
 
@@ -1505,9 +1520,21 @@ class ScreenshotEditor {
         return canvasData;
     }
 
+    async handleArrowToolSelection() {
+        try {
+            if (typeof this.currentScreenshotIndex === 'number' && this.currentScreenshotIndex >= 0) {
+                await this.selectScreenshot(this.currentScreenshotIndex);
+            }
+        } catch (error) {
+            console.warn('重新加载当前步骤以激活箭头工具失败:', error);
+        } finally {
+            this.selectTool('arrow');
+        }
+    }
+
     // 工具选择
     selectTool(toolId) {
-        const normalizedToolId = toolId.endsWith('Tool') ? toolId : `${toolId}Tool`;
+        const normalizedToolId = toolId && !toolId.endsWith('Tool') ? `${toolId}Tool` : (toolId || 'selectTool');
         // 清除之前的工具状态
         this.canvas.isDrawingMode = false;
         this.canvas.selection = true;
@@ -1521,7 +1548,8 @@ class ScreenshotEditor {
             btn.classList.toggle('active', btn.id === normalizedToolId);
         });
 
-        this.currentTool = normalizedToolId.replace('Tool', '');
+        const derivedTool = normalizedToolId.replace('Tool', '');
+        this.currentTool = derivedTool;
 
         // 设置画布模式和光标
         switch (this.currentTool) {
@@ -1571,7 +1599,7 @@ class ScreenshotEditor {
                 break;
             case 'arrow':
                 this.canvas.isDrawingMode = false;
-                this.canvas.selection = false;
+                this.canvas.selection = true;
                 canvasContainer.classList.add('drawing-arrow');
                 break;
             case 'line':
@@ -1595,9 +1623,26 @@ class ScreenshotEditor {
 
     // 画布鼠标事件处理
     onCanvasMouseDown(e) {
-        if (this.currentTool === 'text' && e.target === null) {
+        const target = e ? e.target : null;
+        if (this.currentTool === 'text' && !target) {
             this.startTextEdit(e.pointer);
-        } else if (['rectangle', 'circle', 'arrow'].includes(this.currentTool)) {
+            return;
+        }
+
+        if (this.currentTool === 'arrow') {
+            if (target && !target.isBackgroundImage) {
+                target.selectable = true;
+                target.evented = true;
+                this.canvas.setActiveObject(target);
+                this.canvas.requestRenderAll();
+                this.updatePropertiesPanel(target);
+            } else if (!target) {
+                this.startDrawing(e.pointer);
+            }
+            return;
+        }
+
+        if (['rectangle', 'circle'].includes(this.currentTool)) {
             this.startDrawing(e.pointer);
         }
     }
@@ -2233,23 +2278,42 @@ class ScreenshotEditor {
     }
 
     // 重新排序截图
-    reorderScreenshots(oldIndex, newIndex) {
-        if (oldIndex === newIndex) return;
-        
-        const screenshot = this.screenshots.splice(oldIndex, 1)[0];
-        this.screenshots.splice(newIndex, 0, screenshot);
-        
-        // 更新当前选中索引
+    async reorderScreenshots(oldIndex, newIndex) {
+        if (
+            typeof oldIndex !== 'number' ||
+            typeof newIndex !== 'number' ||
+            oldIndex === newIndex ||
+            oldIndex < 0 ||
+            newIndex < 0 ||
+            oldIndex >= this.screenshots.length ||
+            newIndex >= this.screenshots.length
+        ) {
+            return;
+        }
+
+        // 确保当前步骤的编辑内容已保存
+        this.saveCurrentEditState();
+
+        const moved = this.screenshots.splice(oldIndex, 1)[0];
+        this.screenshots.splice(newIndex, 0, moved);
+
+        // 调整当前索引
         if (this.currentScreenshotIndex === oldIndex) {
             this.currentScreenshotIndex = newIndex;
         } else if (oldIndex < this.currentScreenshotIndex && newIndex >= this.currentScreenshotIndex) {
-            this.currentScreenshotIndex--;
+            this.currentScreenshotIndex = Math.max(0, this.currentScreenshotIndex - 1);
         } else if (oldIndex > this.currentScreenshotIndex && newIndex <= this.currentScreenshotIndex) {
-            this.currentScreenshotIndex++;
+            this.currentScreenshotIndex = Math.min(this.screenshots.length - 1, this.currentScreenshotIndex + 1);
         }
-        
+
         this.loadScreenshots();
-        this.selectScreenshot(this.currentScreenshotIndex);
+
+        try {
+            await this.syncEditedDataToMainStorage();
+        } catch (error) {
+            console.error('同步排序结果失败:', error);
+            this.showError('保存最新顺序失败，请稍后重试');
+        }
     }
 
     // 显示添加截图模态框
@@ -2374,6 +2438,9 @@ class ScreenshotEditor {
     }
 
     mergeOperationsData(existingOps, updatedOps) {
+        if (!Array.isArray(updatedOps) || updatedOps.length === 0) {
+            return existingOps || [];
+        }
         if (!Array.isArray(existingOps) || existingOps.length === 0) {
             return updatedOps;
         }
@@ -2381,24 +2448,23 @@ class ScreenshotEditor {
         const existingMap = new Map();
         existingOps.forEach((op, idx) => {
             const key = this.getOperationKey(op, idx);
-            existingMap.set(key, { op, idx });
+            existingMap.set(key, op);
         });
 
-        updatedOps.forEach((updatedOp, idx) => {
+        const merged = updatedOps.map((updatedOp, idx) => {
             const key = this.getOperationKey(updatedOp, idx);
             if (existingMap.has(key)) {
-                const { idx: originalIdx, op: originalOp } = existingMap.get(key);
-                existingOps[originalIdx] = {
-                    ...originalOp,
-                    ...updatedOp
-                };
+                const originalOp = existingMap.get(key);
                 existingMap.delete(key);
-            } else {
-                existingOps.push(updatedOp);
+                return { ...originalOp, ...updatedOp };
             }
+            return updatedOp;
         });
 
-        return existingOps;
+        // 将未出现在本次编辑中的记录附加在末尾，保持其原有顺序
+        existingMap.forEach(op => merged.push(op));
+
+        return merged;
     }
 
     async syncEditedDataToMainStorage() {
