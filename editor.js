@@ -19,6 +19,8 @@ class ScreenshotEditor {
         this.currentScale = 1;
         this.backgroundImage = null;
         this.backgroundImageSource = null;
+        this.targetCanvasWidth = null;
+        this.targetCanvasHeight = null;
         this.canvasStates = {};
         this.historyStack = [];
         this.redoStack = [];
@@ -831,6 +833,43 @@ class ScreenshotEditor {
         }
         this.canvas.sendToBack(this.backgroundImage);
         this.canvas.renderAll();
+        this.scrollCanvasToTop();
+    }
+
+    scrollCanvasToTop() {
+        const container = document.getElementById('canvasContainer');
+        if (container) {
+            container.scrollTop = 0;
+            container.scrollLeft = 0;
+        }
+    }
+
+    rescaleCanvasObjects() {
+        if (!this.canvas || !this.targetCanvasWidth || !this.targetCanvasHeight) {
+            return;
+        }
+        const originalWidth = this.canvas.getWidth();
+        const originalHeight = this.canvas.getHeight();
+        if (!originalWidth || !originalHeight) {
+            return;
+        }
+        const scaleX = this.targetCanvasWidth / originalWidth;
+        const scaleY = this.targetCanvasHeight / originalHeight;
+        if (scaleX === 1 && scaleY === 1) {
+            return;
+        }
+        this.canvas.setWidth(this.targetCanvasWidth);
+        this.canvas.setHeight(this.targetCanvasHeight);
+        this.canvas.getObjects().forEach(obj => {
+            obj.scaleX *= scaleX;
+            obj.scaleY *= scaleY;
+            obj.left *= scaleX;
+            obj.top *= scaleY;
+            if (obj.strokeWidth) {
+                obj.strokeWidth *= (scaleX + scaleY) / 2;
+            }
+            obj.setCoords();
+        });
     }
 
     initializeDragAndDrop() {
@@ -1234,6 +1273,8 @@ class ScreenshotEditor {
 
             this.canvas.setWidth(scaledWidth);
             this.canvas.setHeight(scaledHeight);
+            this.targetCanvasWidth = scaledWidth;
+            this.targetCanvasHeight = scaledHeight;
 
             img.scale(scale);
             img.set({
@@ -1323,6 +1364,7 @@ class ScreenshotEditor {
                         legacyBackgrounds.forEach(obj => this.canvas.remove(obj));
                     }
 
+                    this.rescaleCanvasObjects();
                     this.canvas.renderAll();
                     this.canvas.getObjects().forEach(obj => this.markObjectStep(obj, stepId));
                     this.removeForeignObjects(stepId);

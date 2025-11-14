@@ -1384,8 +1384,8 @@ class LongScreenshotManager {
     const img = await this.loadImage(dataUrl);
     const dpr = metrics.devicePixelRatio;
     const overlapCss = metrics.overlap || this.segmentOverlap;
-    const seamTopTrim = segmentIndex === 0 ? 0 : Math.min(6, overlapCss * 0.4);
-    const seamBottomTrim = segmentIndex === metrics.offsets.length - 1 ? 0 : Math.min(6, overlapCss * 0.4);
+    const seamTopTrim = segmentIndex === 0 ? 0 : Math.min(8, overlapCss * 0.5);
+    const seamBottomTrim = 0;
     const headerCutCss = segmentIndex === 0 ? 0 : (metrics.fixedHeader || 0);
     const totalTopCutCss = headerCutCss + seamTopTrim;
     const cutTopPx = Math.max(0, Math.round(totalTopCutCss * dpr));
