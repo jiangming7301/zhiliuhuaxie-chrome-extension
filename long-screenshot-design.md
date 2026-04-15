@@ -8,7 +8,7 @@
 - Popup（`popup.html`, `popup.js`）：新增触发按钮、进度/错误提示、状态互斥控制。
 - Background（`background-clean.js`）：负责长截图会话管理、注入 content script、与页面协作、写入 `operations`。
 - Content（`content-clean.js`）：完成滚动、稳定检测、分段截图、拼接、状态回传。
-- 展示层（`popup-clean.js`, `editor.js`, `editor.html`, `editor.css`, `print-handler.js`）：识别 `type: 'long_screenshot'` 的记录，调整展示与导出。
+- 展示层（`popup.js`, `editor.js`, `editor.html`, `editor.css`, `print-handler.js`）：识别 `type: 'long_screenshot'` 的记录，调整展示与导出。
 - 可选：自动下载整图（需 `downloads` 权限，更新 `manifest.json`）。
 
 ## 3. 交互与状态
@@ -65,7 +65,7 @@
 2. **Popup 改造**：更新 `popup.html/popup.js`，实现按钮与状态显示、发送 `startLongScreenshot`、接收进度消息、禁用冲突操作。
 3. **Background 会话管理**：在 `background-clean.js` 添加指令处理、会话状态、超时/取消、`operations` 写入、错误反馈。
 4. **Content 滚动拼接模块**：实现 `PageScreenshotManager`，处理滚动、等待、分段请求、canvas 拼接、状态上报与恢复。
-5. **数据消费者更新**：`popup-clean.js`, `editor.js`, `editor.html`, `editor.css`, `print-handler.js` 支持新类型展示与导出；必要时新增下载按钮。
+5. **数据消费者更新**：`popup.js`, `editor.js`, `editor.html`, `editor.css`, `print-handler.js` 支持新类型展示与导出；必要时新增下载按钮。
 6. **状态持久化**：根据需要在 `chrome.storage.local` 存储进行中的长截图状态，`PopupController` 初始化时恢复 UI。
 7. **测试**：覆盖页面高度/DPR/固定头/懒加载/无限滚动、并发/取消/错误路径、`operations` 超限、不同窗口状态（最小化/切换标签）。
 8. **交付**：代码走查、文档更新、告知权限变化；若有版本说明，记录已知限制与建议使用方式。

@@ -191,24 +191,11 @@ class ScreenshotEditor {
                 this.currentScreenshotIndex = editorData.currentIndex || 0;
                 this.originalScreenshotIndex = editorData.currentIndex;
 
-                if (!this.localStorageLimited) {
-                    try {
-                        localStorage.setItem('operations', JSON.stringify(this.screenshots));
-                        localStorage.setItem('hasEditedContent', 'false');
-                        sessionStorage.setItem('editorData', editorDataStr);
-                        localStorage.setItem('editorData', editorDataStr);
-                    } catch (err) {
-                        console.warn('写入localStorage失败:', err);
-                        if (this.isQuotaExceededError(err)) {
-                            const snapshot = {
-                                operations: this.screenshots,
-                                currentIndex: this.currentScreenshotIndex
-                            };
-                            this.handleLocalStorageQuotaExceeded(snapshot, this.screenshots);
-                        }
-                    }
-                }
-                
+                this.writeLightweightRecoveryCache({
+                    operations: this.screenshots,
+                    currentIndex: this.currentScreenshotIndex
+                }, this.screenshots);
+
                 return;
             }
             
@@ -2486,27 +2473,9 @@ class ScreenshotEditor {
                 currentIndex: this.currentScreenshotIndex
             };
 
-            if (!this.localStorageLimited) {
-                try {
-                    sessionStorage.setItem('editorData', JSON.stringify(editorSnapshot));
-                } catch (err) {
-                    console.warn('写入sessionStorage失败:', err);
-                    if (this.isQuotaExceededError(err)) {
-                        this.activateLightweightMode(false);
-                    }
-                }
-                try {
-                    localStorage.setItem('editorData', JSON.stringify(editorSnapshot));
-                    localStorage.setItem('operations', JSON.stringify(operationsSnapshot));
-                    localStorage.setItem('hasEditedContent', 'true');
-                    localStorage.setItem('lastEditTime', Date.now().toString());
-                } catch (err) {
-                    console.warn('写入localStorage失败:', err);
-                    if (this.isQuotaExceededError(err)) {
-                        this.handleLocalStorageQuotaExceeded(editorSnapshot, operationsSnapshot);
-                    }
-                }
-            }
+            // localStorage/sessionStorage 仅作为轻量恢复缓存：剥离 base64 截图与 editData，
+            // 避免 20+ 张截图时触发 QuotaExceededError。完整数据以 chrome.storage.local 为准。
+            this.writeLightweightRecoveryCache(editorSnapshot, operationsSnapshot);
 
             if (typeof chrome !== 'undefined' && chrome.storage) {
                 const stored = await chrome.storage.local.get(['operations']);
@@ -2523,6 +2492,53 @@ class ScreenshotEditor {
             console.log('编辑后的数据已同步到主存储');
         } catch (error) {
             console.error('同步数据到主存储失败:', error);
+        }
+    }
+
+    buildLightweightOperations(operationsSnapshot) {
+        return operationsSnapshot.map(op => {
+            const { screenshot, editData, ...rest } = op || {};
+            const trimmed = { ...rest, hasScreenshot: !!screenshot };
+            if (editData) {
+                trimmed.editDataMeta = {
+                    canvasWidth: editData.canvasWidth,
+                    canvasHeight: editData.canvasHeight,
+                    scale: editData.scale,
+                    lastModified: editData.lastModified
+                };
+            }
+            return trimmed;
+        });
+    }
+
+    writeLightweightRecoveryCache(editorSnapshot, operationsSnapshot) {
+        try {
+            const lightweightOps = this.buildLightweightOperations(operationsSnapshot);
+            const lightweightSnapshot = {
+                ...editorSnapshot,
+                operations: lightweightOps
+            };
+            const serialized = JSON.stringify(lightweightSnapshot);
+            localStorage.setItem('editorDataLight', serialized);
+            localStorage.setItem('operationsLight', JSON.stringify(lightweightOps));
+            localStorage.setItem('hasEditedContent', 'true');
+            localStorage.setItem('lastEditTime', Date.now().toString());
+            try {
+                sessionStorage.setItem('editorDataLight', serialized);
+            } catch (sessionErr) {
+                // sessionStorage 失败不致命，忽略
+            }
+        } catch (err) {
+            if (this.isQuotaExceededError(err)) {
+                try {
+                    localStorage.removeItem('editorDataLight');
+                    localStorage.removeItem('operationsLight');
+                    localStorage.removeItem('editorData');
+                    localStorage.removeItem('operations');
+                } catch (_) {}
+            } else {
+                console.warn('写入轻量恢复缓存失败:', err);
+            }
         }
     }
 

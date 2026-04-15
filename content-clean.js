@@ -1018,7 +1018,7 @@ class ContentRecorder {
     upgradeBtn.id = 'upgradeNowBtn';
     upgradeBtn.textContent = '立即升级';
     upgradeBtn.style.cssText = `
-      background: linear-gradient(135deg, #ff4444, #ff6666);
+      background: #ef4444;
       color: white;
       border: none;
       padding: 12px 25px;

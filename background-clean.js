@@ -17,12 +17,25 @@ const initialLongScreenshotState = {
   targetUrl: null,
   targetTitle: null
 };
+const LONG_SCREENSHOT_STATE_STORAGE_KEY = 'longScreenshotState';
+const ACTIVE_LONG_SCREENSHOT_STATUSES = new Set(['pending', 'capturing']);
+
 let longScreenshotState = { ...initialLongScreenshotState };
 let longScreenshotTimeoutId = null;
 let lastCaptureTimestamp = 0;
 
 function getSerializableLongScreenshotState() {
   return JSON.parse(JSON.stringify(longScreenshotState));
+}
+
+function persistLongScreenshotState() {
+  try {
+    chrome.storage.local.set({
+      [LONG_SCREENSHOT_STATE_STORAGE_KEY]: getSerializableLongScreenshotState()
+    });
+  } catch (error) {
+    console.warn('持久化整页截图状态失败:', error);
+  }
 }
 
 function broadcastLongScreenshotState() {
@@ -44,13 +57,41 @@ function updateLongScreenshotState(partial = {}) {
     nextState[key] = partial[key];
   });
   longScreenshotState = nextState;
+  persistLongScreenshotState();
   broadcastLongScreenshotState();
 }
 
 function resetLongScreenshotState(partial = {}) {
   longScreenshotState = { ...initialLongScreenshotState, ...partial };
+  persistLongScreenshotState();
   broadcastLongScreenshotState();
 }
+
+// Service worker 重启后恢复整页截图状态。由于重启意味着会话的
+// 定时器/tab 通道已断，活跃中的会话无法继续，标记为 error 以避免
+// UI 卡在 capturing；终态（success/error/canceled/idle）直接保留。
+async function rehydrateLongScreenshotState() {
+  try {
+    const stored = await chrome.storage.local.get([LONG_SCREENSHOT_STATE_STORAGE_KEY]);
+    const saved = stored[LONG_SCREENSHOT_STATE_STORAGE_KEY];
+    if (!saved || typeof saved !== 'object') return;
+    if (ACTIVE_LONG_SCREENSHOT_STATUSES.has(saved.status)) {
+      longScreenshotState = {
+        ...initialLongScreenshotState,
+        status: 'error',
+        error: 'service_worker_restart',
+        message: '后台已重启，整页截图任务中断，请重试'
+      };
+      persistLongScreenshotState();
+    } else {
+      longScreenshotState = { ...initialLongScreenshotState, ...saved };
+    }
+  } catch (error) {
+    console.warn('恢复整页截图状态失败:', error);
+  }
+}
+
+rehydrateLongScreenshotState();
 
 function clearLongScreenshotTimeout() {
   if (longScreenshotTimeoutId) {
