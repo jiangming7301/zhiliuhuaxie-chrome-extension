@@ -1564,23 +1564,13 @@ class ScreenshotEditor {
                 canvasContainer.classList.add('drawing-pen');
                 this.canvas.freeDrawingBrush.width = parseInt(document.getElementById('strokeWidth').value);
                 this.canvas.freeDrawingBrush.color = document.getElementById('colorPicker').value;
-                this.canvas.freeDrawingBrush.onMouseUp = () => {
-                    this.pushHistorySnapshot();
-                    this.immediateSave();
-                };
                 break;
             case 'highlighter':
                 this.canvas.isDrawingMode = true;
                 this.canvas.selection = false;
                 canvasContainer.classList.add('drawing-highlighter');
                 this.canvas.freeDrawingBrush.width = parseInt(document.getElementById('strokeWidth').value);
-                this.canvas.freeDrawingBrush.color = document.getElementById('colorPicker').value;
-                // 设置高亮笔的透明度
                 this.canvas.freeDrawingBrush.color = this.hexToRgba(document.getElementById('colorPicker').value, 0.3);
-                this.canvas.freeDrawingBrush.onMouseUp = () => {
-                    this.pushHistorySnapshot();
-                    this.immediateSave();
-                };
                 break;
             case 'rectangle':
                 this.canvas.isDrawingMode = false;
@@ -1637,7 +1627,7 @@ class ScreenshotEditor {
             return;
         }
 
-        if (['rectangle', 'circle'].includes(this.currentTool)) {
+        if (['rectangle', 'circle', 'line'].includes(this.currentTool)) {
             this.startDrawing(e.pointer);
         }
     }
