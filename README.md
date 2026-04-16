@@ -26,6 +26,7 @@
 - ✏️ **可视化编辑** —— 内置富文本编辑器（Quill）+ 截图标注画布（Fabric.js），箭头、文字、矩形、画笔随意标
 - 🔀 **步骤重排** —— 拖拽调整操作顺序（Sortable.js），支持删除、重录单步
 - 📤 **多格式导出** —— 一键导出 PDF / 打印友好页面（基于浏览器原生能力）
+- 🌐 **国际化（i18n）** —— 支持中文和英文界面，自动跟随浏览器语言切换
 - 🔒 **数据本地化** —— 所有记录存在 `chrome.storage.local`，不上云不上传
 - ⚡ **无构建依赖** —— 纯原生 JS + CSS，源文件即加载文件，零 npm 依赖
 
@@ -80,6 +81,16 @@ Vendor 库（直接提交 `*.min.js`，无打包）：
   - Content —— 目标网页 DevTools → Console
   - Editor —— 编辑器 tab 的 DevTools
 
+### 更新日志
+
+#### v1.2.0
+- 修复钢笔工具连笔问题（每次抬笔后笔画相连，无法独立绘制）
+- 修复线条工具点击画布无反应的问题
+- 新增国际化（i18n）支持：中文/英文界面，自动跟随浏览器语言
+
+#### v1.1.0
+- 长截图稳定性与编辑器容量优化
+
 ### 已知限制
 
 - MV3 service worker 会休眠，长截图进行中若 worker 重启，当前会话会被标记为错误并提示重试（v1.1.0 已修复 UI 卡死问题）
@@ -115,6 +126,7 @@ Great for: **user manuals, bug reproduction reports, tutorials, test case docume
 - ✏️ **Visual editing** — Built-in rich-text editor (Quill) + annotation canvas (Fabric.js) with arrows, text, shapes, and pen
 - 🔀 **Step reordering** — Drag-and-drop steps (Sortable.js), delete or re-record single steps
 - 📤 **Export** — One-click PDF export and print-friendly pages
+- 🌐 **Internationalization (i18n)** — Chinese and English UI, auto-switches based on browser language
 - 🔒 **Local-first** — All data lives in `chrome.storage.local`; nothing is uploaded
 - ⚡ **Zero build** — Pure vanilla JS + CSS, source files are load files, no npm dependencies
 
@@ -167,6 +179,16 @@ See [`long-screenshot-design.md`](./long-screenshot-design.md) for the long-scre
   - Popup — Right-click the extension icon → "Inspect popup"
   - Content — Target page DevTools → Console
   - Editor — Editor tab DevTools
+
+### Changelog
+
+#### v1.2.0
+- Fixed pen tool stroke connectivity issue (strokes were linked instead of independent)
+- Fixed line tool not responding to canvas clicks
+- Added internationalization (i18n): Chinese/English UI, auto-switches with browser language
+
+#### v1.1.0
+- Long screenshot stability and editor capacity improvements
 
 ### Known Limitations
 
