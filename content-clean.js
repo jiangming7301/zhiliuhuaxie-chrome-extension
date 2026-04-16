@@ -404,7 +404,7 @@ class ContentRecorder {
       max-width: 300px;
       word-wrap: break-word;
     `;
-    hint.textContent = '🔄 重新记录模式：请点击要重新截图的元素';
+    hint.textContent = chrome.i18n.getMessage('content_rerecord_hint');
     
     // 添加动画样式
     const style = document.createElement('style');
@@ -1000,7 +1000,7 @@ class ContentRecorder {
     
     // 使用安全的DOM操作替代innerHTML
     const titleDiv = document.createElement('div');
-    titleDiv.textContent = '🚀 升级专业版';
+    titleDiv.textContent = chrome.i18n.getMessage('content_upgrade_title');
     titleDiv.style.cssText = 'color: #ff4444; font-weight: bold; margin-bottom: 20px; font-size: 20px;';
     
     const messageDiv = document.createElement('div');
@@ -1008,7 +1008,7 @@ class ContentRecorder {
     messageDiv.style.cssText = 'color: #333; margin-bottom: 25px; line-height: 1.6; font-size: 16px;';
     
     const featuresDiv = document.createElement('div');
-    featuresDiv.textContent = '专业版功能：无限截图、高级导出、优先支持';
+    featuresDiv.textContent = chrome.i18n.getMessage('content_upgrade_features');
     featuresDiv.style.cssText = 'color: #666; margin-bottom: 25px; font-size: 14px;';
     
     const buttonsDiv = document.createElement('div');
@@ -1016,7 +1016,7 @@ class ContentRecorder {
     
     const upgradeBtn = document.createElement('button');
     upgradeBtn.id = 'upgradeNowBtn';
-    upgradeBtn.textContent = '立即升级';
+    upgradeBtn.textContent = chrome.i18n.getMessage('btn_upgrade_now');
     upgradeBtn.style.cssText = `
       background: #ef4444;
       color: white;
@@ -1031,7 +1031,7 @@ class ContentRecorder {
     
     const closeBtn = document.createElement('button');
     closeBtn.id = 'closePromptBtn';
-    closeBtn.textContent = '稍后再说';
+    closeBtn.textContent = chrome.i18n.getMessage('content_later');
     closeBtn.style.cssText = `
       background: #f0f0f0;
       color: #666;

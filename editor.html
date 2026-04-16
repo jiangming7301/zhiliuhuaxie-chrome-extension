@@ -16,55 +16,55 @@
     <!-- 顶部工具栏 -->
     <header class="toolbar">
         <div class="toolbar-left">
-            <button class="toolbar-btn" id="backBtn" title="返回">
+            <button class="toolbar-btn" id="backBtn" data-i18n-title="btn_back" title="返回">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
-                返回
+                <span data-i18n="btn_back">返回</span>
             </button>
             <div class="toolbar-divider"></div>
-            <span class="project-title" id="projectTitle">编辑项目</span>
+            <span class="project-title" id="projectTitle" data-i18n="editor_project_title">编辑项目</span>
         </div>
         
         <div class="toolbar-center">
             <div class="tool-group">
-                <button class="tool-btn active" id="selectTool" title="选择工具">
+                <button class="tool-btn active" id="selectTool" data-i18n-title="tool_select" title="选择工具">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
                     </svg>
                 </button>
-                <button class="tool-btn" id="textTool" title="文本工具">
+                <button class="tool-btn" id="textTool" data-i18n-title="tool_text" title="文本工具">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 7V4h16v3M9 20h6M12 4v16"/>
                     </svg>
                 </button>
-                <button class="tool-btn" id="rectangleTool" title="矩形">
+                <button class="tool-btn" id="rectangleTool" data-i18n-title="tool_rect" title="矩形">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                     </svg>
                 </button>
-                <button class="tool-btn" id="circleTool" title="圆形">
+                <button class="tool-btn" id="circleTool" data-i18n-title="tool_circle" title="圆形">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/>
                     </svg>
                 </button>
-                <button class="tool-btn" id="arrowTool" title="箭头">
+                <button class="tool-btn" id="arrowTool" data-i18n-title="tool_arrow" title="箭头">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M5 12h14m-7-7l7 7-7 7"/>
                     </svg>
                 </button>
-                <button class="tool-btn" id="penTool" title="画笔">
+                <button class="tool-btn" id="penTool" data-i18n-title="tool_pen" title="画笔">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 19l7-7 3 3-7 7-3-3z"/>
                         <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
                     </svg>
                 </button>
-                <button class="tool-btn" id="lineTool" title="直线">
+                <button class="tool-btn" id="lineTool" data-i18n-title="tool_line" title="直线">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M6 18L18 6"/>
                     </svg>
                 </button>
-                <button class="tool-btn" id="highlighterTool" title="高亮笔">
+                <button class="tool-btn" id="highlighterTool" data-i18n-title="tool_highlighter" title="高亮笔">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 11l3 3L22 4"/>
                         <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
@@ -74,19 +74,19 @@
         </div>
         
         <div class="toolbar-right">
-            <button class="toolbar-btn" id="undoBtn" title="撤销">
+            <button class="toolbar-btn" id="undoBtn" data-i18n-title="tool_undo" title="撤销">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M3 7v6h6"/>
                     <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/>
                 </svg>
             </button>
-            <button class="toolbar-btn" id="redoBtn" title="重做">
+            <button class="toolbar-btn" id="redoBtn" data-i18n-title="tool_redo" title="重做">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 7v6h-6"/>
                     <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/>
                 </svg>
             </button>
-            <button class="toolbar-btn" id="deleteSelectionBtn" title="删除选中标注">
+            <button class="toolbar-btn" id="deleteSelectionBtn" data-i18n-title="tool_delete_selection" title="删除选中标注">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="3,6 5,6 21,6"/>
                     <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6"/>
@@ -102,7 +102,7 @@
                     <polyline points="17,21 17,13 7,13 7,21"/>
                     <polyline points="7,3 7,8 15,8"/>
                 </svg>
-                保存修改
+                <span data-i18n="btn_save_changes">保存修改</span>
             </button>
         </div>
     </header>
@@ -113,9 +113,9 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-tabs">
-                    <button class="sidebar-tab active" data-tab="screenshots">截图</button>
-                    <button class="sidebar-tab" data-tab="layers">图层</button>
-                    <button class="sidebar-tab" data-tab="properties">属性</button>
+                    <button class="sidebar-tab active" data-tab="screenshots" data-i18n="tab_screenshots">截图</button>
+                    <button class="sidebar-tab" data-tab="layers" data-i18n="tab_layers">图层</button>
+                    <button class="sidebar-tab" data-tab="properties" data-i18n="tab_properties">属性</button>
                 </div>
                 <button class="sidebar-toggle" id="sidebarToggle">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -127,8 +127,8 @@
             <!-- 截图面板 -->
             <div class="sidebar-panel active" id="screenshotsPanel">
                 <div class="panel-header">
-                    <h3>截图管理</h3>
-                    <button class="panel-btn" id="addScreenshotBtn" title="添加截图">
+                    <h3 data-i18n="panel_screenshot_mgmt">截图管理</h3>
+                    <button class="panel-btn" id="addScreenshotBtn" data-i18n-title="panel_add_screenshot" title="添加截图">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"/>
                             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -143,8 +143,8 @@
             <!-- 图层面板 -->
             <div class="sidebar-panel" id="layersPanel">
                 <div class="panel-header">
-                    <h3>图层管理</h3>
-                    <button class="panel-btn" id="addLayerBtn" title="添加图层">
+                    <h3 data-i18n="panel_layer_mgmt">图层管理</h3>
+                    <button class="panel-btn" id="addLayerBtn" data-i18n-title="panel_add_layer" title="添加图层">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"/>
                             <line x1="5" y1="12" x2="19" y2="12"/>
@@ -159,20 +159,20 @@
             <!-- 属性面板 -->
             <div class="sidebar-panel" id="propertiesPanel">
                 <div class="panel-header">
-                    <h3>属性设置</h3>
+                    <h3 data-i18n="panel_properties">属性设置</h3>
                 </div>
                 <div class="properties-content" id="propertiesContent">
                     <div class="property-group">
-                        <label>颜色</label>
+                        <label data-i18n="label_color">颜色</label>
                         <input type="color" id="colorPicker" value="#ff0000">
                     </div>
                     <div class="property-group">
-                        <label>线条粗细</label>
+                        <label data-i18n="label_stroke_thickness">线条粗细</label>
                         <input type="range" id="strokeWidth" min="1" max="20" value="2">
                         <span id="strokeWidthValue">2px</span>
                     </div>
                     <div class="property-group">
-                        <label>透明度</label>
+                        <label data-i18n="label_opacity">透明度</label>
                         <input type="range" id="opacity" min="0" max="100" value="100">
                         <span id="opacityValue">100%</span>
                     </div>
@@ -193,8 +193,8 @@
                 <!-- 右侧：文字内容显示区域 -->
                 <div class="content-section" id="contentSection">
                     <div class="content-header">
-                        <h3 id="contentTitle">步骤详情</h3>
-                        <button class="content-toggle" id="contentToggle" title="折叠/展开">
+                        <h3 id="contentTitle" data-i18n="step_details">步骤详情</h3>
+                        <button class="content-toggle" id="contentToggle" data-i18n-title="toggle_collapse" title="折叠/展开">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M18 15l-6-6-6 6"/>
                             </svg>
@@ -202,21 +202,21 @@
                     </div>
                     <div class="content-body" id="contentBody">
                         <div class="step-info" id="stepInfo">
-                            <div class="step-title" id="stepTitle">步骤 1</div>
+                            <div class="step-title" id="stepTitle" data-i18n="step_label">步骤 1</div>
                             <div class="step-description" id="stepDescription">
-                                <p>暂无描述信息</p>
+                                <p data-i18n="no_description">暂无描述信息</p>
                             </div>
                             <div class="step-metadata" id="stepMetadata">
                                 <div class="metadata-item">
-                                    <span class="metadata-label">URL:</span>
+                                    <span class="metadata-label" data-i18n="label_url">URL:</span>
                                     <span class="metadata-value" id="stepUrl">-</span>
                                 </div>
                                 <div class="metadata-item">
-                                    <span class="metadata-label">时间:</span>
+                                    <span class="metadata-label" data-i18n="label_time">时间:</span>
                                     <span class="metadata-value" id="stepTime">-</span>
                                 </div>
                                 <div class="metadata-item">
-                                    <span class="metadata-label">操作:</span>
+                                    <span class="metadata-label" data-i18n="label_action">操作:</span>
                                     <span class="metadata-value" id="stepAction">-</span>
                                 </div>
                             </div>
@@ -225,15 +225,15 @@
                         <!-- Markdown 编辑区域 -->
                         <div class="markdown-editor-container" id="markdownEditorContainer">
                             <div class="markdown-editor-header">
-                                <h4>步骤描述编辑</h4>
+                                <h4 data-i18n="step_desc_editor">步骤描述编辑</h4>
                                 <div class="markdown-mode-toggle">
-                                    <button class="mode-btn active" id="editModeBtn" title="编辑模式">编辑</button>
-                                    <button class="mode-btn" id="previewModeBtn" title="预览模式">预览</button>
+                                    <button class="mode-btn active" id="editModeBtn" data-i18n-title="mode_edit_tooltip" data-i18n="mode_edit" title="编辑模式">编辑</button>
+                                    <button class="mode-btn" id="previewModeBtn" data-i18n-title="mode_preview_tooltip" data-i18n="mode_preview" title="预览模式">预览</button>
                                 </div>
                             </div>
                             <div class="markdown-editor-body">
                                 <div class="markdown-editor" id="markdownEditor">
-                                    <textarea id="markdownTextarea" placeholder="在此输入步骤描述，支持Markdown格式..."></textarea>
+                                    <textarea id="markdownTextarea" data-i18n-placeholder="markdown_placeholder" placeholder="在此输入步骤描述，支持Markdown格式..."></textarea>
                                 </div>
                                 <div class="markdown-preview" id="markdownPreview" style="display: none;">
                                     <div id="markdownContent"></div>
@@ -248,8 +248,8 @@
                     <div class="text-editor-container">
                         <div id="textEditor"></div>
                         <div class="text-editor-actions">
-                            <button class="btn-secondary" id="cancelTextEdit">取消</button>
-                            <button class="btn-primary" id="confirmTextEdit">确认</button>
+                            <button class="btn-secondary" id="cancelTextEdit" data-i18n="btn_cancel">取消</button>
+                            <button class="btn-primary" id="confirmTextEdit" data-i18n="btn_confirm">确认</button>
                         </div>
                     </div>
                 </div>
@@ -258,10 +258,10 @@
             <!-- 底部状态栏 -->
             <div class="status-bar">
                 <div class="status-left">
-                    <span id="canvasInfo">画布: 1920 x 1080</span>
+                    <span id="canvasInfo" data-i18n="canvas_info">画布: 1920 x 1080</span>
                 </div>
                 <div class="status-right">
-                    <span id="selectionInfo">未选择对象</span>
+                    <span id="selectionInfo" data-i18n="no_selection">未选择对象</span>
                 </div>
             </div>
         </section>
@@ -273,7 +273,7 @@
         <!-- 添加截图对话框 -->
         <div class="modal" id="addScreenshotModal" style="display: none;">
             <div class="modal-header">
-                <h3>添加截图</h3>
+                <h3 data-i18n="panel_add_screenshot">添加截图</h3>
                 <button class="modal-close" data-modal="addScreenshotModal">×</button>
             </div>
             <div class="modal-body">
@@ -283,7 +283,7 @@
                         <polyline points="7,10 12,15 17,10"/>
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    <p>拖拽图片到此处或点击选择文件</p>
+                    <p data-i18n="upload_hint">拖拽图片到此处或点击选择文件</p>
                     <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
                 </div>
             </div>
@@ -291,6 +291,7 @@
     </main>
 
     <!-- JavaScript -->
+    <script src="i18n.js"></script>
     <script src="editor.js"></script>
 </body>
 </html>

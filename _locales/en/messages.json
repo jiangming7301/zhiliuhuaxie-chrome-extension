@@ -1,0 +1,733 @@
+{
+  "ext_name": {
+    "message": "Zhiliu Scribe"
+  },
+  "ext_description": {
+    "message": "A Chrome extension that auto-records web interactions and generates documents"
+  },
+
+  "status_not_recording": {
+    "message": "Not Recording"
+  },
+  "status_recording": {
+    "message": "Recording..."
+  },
+  "status_loading": {
+    "message": "Loading..."
+  },
+  "loading": {
+    "message": "Loading..."
+  },
+
+  "btn_start_recording": {
+    "message": "Start Recording"
+  },
+  "btn_stop_recording": {
+    "message": "Stop Recording"
+  },
+  "btn_long_screenshot": {
+    "message": "Full Page"
+  },
+  "btn_cancel_long_screenshot": {
+    "message": "Cancel Capture"
+  },
+  "btn_export": {
+    "message": "Export"
+  },
+  "btn_clear": {
+    "message": "Clear All"
+  },
+  "btn_upgrade": {
+    "message": "Upgrade to Pro"
+  },
+  "btn_upgrade_now": {
+    "message": "Upgrade Now"
+  },
+  "btn_upgrade_pro_now": {
+    "message": "🚀 Upgrade to Pro Now"
+  },
+  "btn_upgrade_pro": {
+    "message": "⭐ Upgrade to Pro"
+  },
+  "btn_retry": {
+    "message": "Retry Connection"
+  },
+  "btn_save": {
+    "message": "Save"
+  },
+  "btn_cancel": {
+    "message": "Cancel"
+  },
+  "btn_confirm": {
+    "message": "Confirm"
+  },
+  "btn_confirm_activate": {
+    "message": "Activate"
+  },
+  "btn_preparing": {
+    "message": "Preparing..."
+  },
+  "btn_activating": {
+    "message": "Activating..."
+  },
+  "btn_save_changes": {
+    "message": "Save Changes"
+  },
+  "btn_back": {
+    "message": "Back"
+  },
+
+  "label_screenshot_count": {
+    "message": "Screenshots:"
+  },
+  "label_click_count": {
+    "message": "Clicks:"
+  },
+  "label_duration": {
+    "message": "Duration:"
+  },
+  "label_color": {
+    "message": "Color"
+  },
+  "label_stroke_color": {
+    "message": "Stroke Color"
+  },
+  "label_stroke_width": {
+    "message": "Width:"
+  },
+  "label_stroke_thickness": {
+    "message": "Stroke Width"
+  },
+  "label_opacity": {
+    "message": "Opacity"
+  },
+
+  "section_screenshots": {
+    "message": "Screenshots"
+  },
+  "no_screenshots": {
+    "message": "No screenshots yet"
+  },
+  "loading_screenshots": {
+    "message": "Loading screenshots..."
+  },
+  "time_unknown": {
+    "message": "Time unknown"
+  },
+  "url_unavailable": {
+    "message": "No URL available"
+  },
+  "no_text": {
+    "message": "No text"
+  },
+  "long_screenshot_label": {
+    "message": "Full-page screenshot"
+  },
+  "segments_label": {
+    "message": "$COUNT$ segments",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "height_label": {
+    "message": "$HEIGHT$px tall",
+    "placeholders": { "height": { "content": "$1" } }
+  },
+  "duration_label": {
+    "message": "$DURATION$s",
+    "placeholders": { "duration": { "content": "$1" } }
+  },
+
+  "plan_premium": {
+    "message": "Pro"
+  },
+  "plan_free": {
+    "message": "Free"
+  },
+  "usage_text": {
+    "message": "$USED$ / $TOTAL$ screenshots used",
+    "placeholders": {
+      "used": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
+  },
+  "usage_limit_reached": {
+    "message": "⚠️ Limit reached — upgrade to Pro"
+  },
+  "usage_remaining": {
+    "message": "$COUNT$ remaining",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+
+  "upgrade_title": {
+    "message": "Upgrade to Pro"
+  },
+  "upgrade_message": {
+    "message": "You've reached the free plan limit. Upgrade to Pro for unlimited usage."
+  },
+  "price_quarterly": {
+    "message": "Quarterly: ¥19.9"
+  },
+  "price_yearly": {
+    "message": "Yearly: ¥49.9"
+  },
+  "price_yearly_discount": {
+    "message": "(Save 37%)"
+  },
+
+  "edit_screenshot": {
+    "message": "Edit Screenshot"
+  },
+  "tool_select": {
+    "message": "Select"
+  },
+  "tool_text": {
+    "message": "Text"
+  },
+  "tool_rect": {
+    "message": "Rectangle"
+  },
+  "tool_circle": {
+    "message": "Circle"
+  },
+  "tool_line": {
+    "message": "Line"
+  },
+  "tool_free_draw": {
+    "message": "Free Draw"
+  },
+  "tool_number": {
+    "message": "Number Label"
+  },
+  "tool_arrow": {
+    "message": "Arrow"
+  },
+  "tool_pen": {
+    "message": "Pen"
+  },
+  "tool_highlighter": {
+    "message": "Highlighter"
+  },
+  "tool_undo": {
+    "message": "Undo"
+  },
+  "tool_redo": {
+    "message": "Redo"
+  },
+  "tool_delete_selection": {
+    "message": "Delete Selected"
+  },
+
+  "activation_title": {
+    "message": "Enter License Key"
+  },
+  "activation_prompt": {
+    "message": "Please enter your Pro license key:"
+  },
+  "activation_placeholder": {
+    "message": "Format: XXXX-XXXX-XXXX-XXXX"
+  },
+  "activation_empty": {
+    "message": "Please enter a license key"
+  },
+  "activation_failed": {
+    "message": "Activation failed"
+  },
+  "activation_success": {
+    "message": "Activated! Welcome to Pro."
+  },
+  "activation_network_error": {
+    "message": "Network error, please try again"
+  },
+
+  "error_init_failed": {
+    "message": "Initialization failed. Please reload the extension."
+  },
+  "error_bg_connect_failed": {
+    "message": "Cannot connect to the extension background service"
+  },
+  "error_message_timeout": {
+    "message": "Message timed out"
+  },
+  "error_start_recording": {
+    "message": "Failed to start recording: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_stop_recording": {
+    "message": "Failed to stop recording: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_export_pdf": {
+    "message": "PDF export failed: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_export_word": {
+    "message": "Word export failed: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_export_md": {
+    "message": "Markdown export failed: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_export_screenshot": {
+    "message": "Screenshot export failed: $MSG$\nPlease use Word or PDF format instead.",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_load_jszip": {
+    "message": "Failed to load JSZip library"
+  },
+
+  "long_shot_preparing": {
+    "message": "Preparing full-page capture..."
+  },
+  "long_shot_capturing": {
+    "message": "Capturing full page..."
+  },
+  "long_shot_capturing_progress": {
+    "message": "Capturing $CAPTURED$ / $TOTAL$",
+    "placeholders": {
+      "captured": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
+  },
+  "long_shot_canceling": {
+    "message": "Canceling capture..."
+  },
+  "long_shot_completed": {
+    "message": "Full-page capture complete"
+  },
+  "long_shot_canceled": {
+    "message": "Capture canceled"
+  },
+  "long_shot_failed": {
+    "message": "Capture failed: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "long_shot_status_update": {
+    "message": "Capture status updated"
+  },
+  "long_shot_unknown_error": {
+    "message": "Unknown error"
+  },
+  "warn_stop_before_long_shot": {
+    "message": "Please stop recording before taking a full-page screenshot"
+  },
+  "warn_long_shot_in_progress": {
+    "message": "Full-page capture is in progress, please wait"
+  },
+  "error_start_long_shot": {
+    "message": "Cannot start capture: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_cancel_long_shot": {
+    "message": "Failed to cancel capture, please try again later"
+  },
+
+  "free_limit_reached": {
+    "message": "Free plan limit of $LIMIT$ screenshots reached. Upgrade to Pro for unlimited use!",
+    "placeholders": { "limit": { "content": "$1" } }
+  },
+  "free_limit_warning": {
+    "message": "1 screenshot remaining — approaching free plan limit"
+  },
+  "free_page_limit": {
+    "message": "Free plan limit of 20 pages reached. Upgrade to Pro to continue."
+  },
+  "free_limit_default": {
+    "message": "Free plan limit reached. Upgrade to use full-page capture."
+  },
+  "free_export_limit": {
+    "message": "Free plan limited to 20 screenshots. Only the first 20 will be exported. Upgrade to Pro to export all $COUNT$!",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "no_operations_to_export": {
+    "message": "No operations to export. Please record some actions first."
+  },
+
+  "export_choose_format": {
+    "message": "Choose Export Format"
+  },
+  "export_step_count": {
+    "message": "$COUNT$ steps total",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "export_pdf": {
+    "message": "📄 PDF"
+  },
+  "export_pdf_desc": {
+    "message": "Save via print dialog, screenshots only"
+  },
+  "export_word": {
+    "message": "📝 Word"
+  },
+  "export_word_desc": {
+    "message": "Download DOCX file, screenshots only"
+  },
+  "export_md": {
+    "message": "📋 Markdown"
+  },
+  "export_md_desc": {
+    "message": "Download MD file, screenshots only"
+  },
+  "export_pdf_instruction": {
+    "message": "The print dialog will open. Follow these steps:\n\n1. Select \"Save as PDF\" as the destination\n2. Set paper size to A4\n3. Choose a save location and click Save"
+  },
+  "export_pdf_hint": {
+    "message": "Tip:"
+  },
+  "export_pdf_hint_detail": {
+    "message": "Use your browser's print function (Ctrl+P) and select \"Save as PDF\" to save as a PDF file."
+  },
+  "export_word_success": {
+    "message": "Word document downloaded! Filename: $FILE$",
+    "placeholders": { "file": { "content": "$1" } }
+  },
+  "export_md_success": {
+    "message": "Markdown downloaded! Filename: $FILE$\n\nTip: Screenshots are embedded and viewable directly.",
+    "placeholders": { "file": { "content": "$1" } }
+  },
+  "export_screenshots_success": {
+    "message": "Screenshots packaged and downloaded! Unzip to view alongside the Markdown file."
+  },
+  "doc_title": {
+    "message": "Operation Workflow Document"
+  },
+  "doc_filename_prefix": {
+    "message": "workflow-document"
+  },
+  "doc_screenshot_filename_prefix": {
+    "message": "workflow-screenshots"
+  },
+  "step_label": {
+    "message": "Step $NUM$",
+    "placeholders": { "num": { "content": "$1" } }
+  },
+  "step_label_with_action": {
+    "message": "Step $NUM$: $ACTION$",
+    "placeholders": {
+      "num": { "content": "$1" },
+      "action": { "content": "$2" }
+    }
+  },
+  "step_screenshot_alt": {
+    "message": "Step $NUM$ screenshot",
+    "placeholders": { "num": { "content": "$1" } }
+  },
+
+  "subscription_expiry_hours": {
+    "message": "Your Pro subscription expires in $HOURS$h $MINUTES$m. Please renew to avoid interruption.",
+    "placeholders": {
+      "hours": { "content": "$1" },
+      "minutes": { "content": "$2" }
+    }
+  },
+  "subscription_expiry_minutes": {
+    "message": "Your Pro subscription expires in $MINUTES$ minutes. Renew now!",
+    "placeholders": { "minutes": { "content": "$1" } }
+  },
+  "subscription_expiry_title": {
+    "message": "⚠️ Subscription Expiring Soon"
+  },
+  "subscription_expiry_confirm": {
+    "message": "Click OK to renew, or Cancel to be reminded later."
+  },
+  "subscription_expired_title": {
+    "message": "🔔 Subscription Expired"
+  },
+  "subscription_expired_body": {
+    "message": "Your Pro subscription has expired. You've been switched to the Free plan.\n\nFree plan is limited to 20 pages. Renew to continue using Pro features.\n\nQuarterly: ¥19.9\nYearly: ¥49.9 (Save 37%)"
+  },
+  "subscription_expired_confirm": {
+    "message": "Click OK to renew, or Cancel to continue with the Free plan."
+  },
+
+  "editor_title": {
+    "message": "Screenshot Editor - CodeBuddy Pro"
+  },
+  "editor_project_title": {
+    "message": "Edit Project"
+  },
+  "tab_screenshots": {
+    "message": "Shots"
+  },
+  "tab_layers": {
+    "message": "Layers"
+  },
+  "tab_properties": {
+    "message": "Props"
+  },
+  "panel_screenshot_mgmt": {
+    "message": "Screenshots"
+  },
+  "panel_add_screenshot": {
+    "message": "Add Screenshot"
+  },
+  "panel_layer_mgmt": {
+    "message": "Layers"
+  },
+  "panel_add_layer": {
+    "message": "Add Layer"
+  },
+  "panel_properties": {
+    "message": "Properties"
+  },
+  "step_details": {
+    "message": "Step Details"
+  },
+  "toggle_collapse": {
+    "message": "Collapse/Expand"
+  },
+  "no_description": {
+    "message": "No description"
+  },
+  "label_url": {
+    "message": "URL:"
+  },
+  "label_time": {
+    "message": "Time:"
+  },
+  "label_action": {
+    "message": "Action:"
+  },
+  "step_desc_editor": {
+    "message": "Step Description"
+  },
+  "mode_edit": {
+    "message": "Edit"
+  },
+  "mode_edit_tooltip": {
+    "message": "Edit mode"
+  },
+  "mode_preview": {
+    "message": "Preview"
+  },
+  "mode_preview_tooltip": {
+    "message": "Preview mode"
+  },
+  "markdown_placeholder": {
+    "message": "Enter step description here (Markdown supported)..."
+  },
+  "canvas_info": {
+    "message": "Canvas: $W$ x $H$",
+    "placeholders": {
+      "w": { "content": "$1" },
+      "h": { "content": "$2" }
+    }
+  },
+  "no_selection": {
+    "message": "No object selected"
+  },
+  "upload_hint": {
+    "message": "Drag images here or click to browse"
+  },
+  "error_editor_init": {
+    "message": "Editor initialization failed. Please refresh."
+  },
+  "error_invalid_index": {
+    "message": "Invalid screenshot index"
+  },
+  "text_placeholder": {
+    "message": "Double-click to edit"
+  },
+  "selected_object": {
+    "message": "Selected: $TYPE$",
+    "placeholders": { "type": { "content": "$1" } }
+  },
+  "error_min_screenshot": {
+    "message": "At least one screenshot must be kept"
+  },
+  "confirm_delete_screenshot": {
+    "message": "Delete this screenshot?"
+  },
+  "error_select_image": {
+    "message": "Please select an image file"
+  },
+  "error_save_order": {
+    "message": "Failed to save order. Please try again."
+  },
+  "error_enter_version": {
+    "message": "Please enter a version name"
+  },
+  "error_no_screenshot": {
+    "message": "No screenshot to save"
+  },
+  "error_storage_full": {
+    "message": "Browser storage full. Cannot save version history locally."
+  },
+  "save_version_success": {
+    "message": "Version saved!"
+  },
+  "error_save_version": {
+    "message": "Save version failed: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_storage_trim": {
+    "message": "Storage full. Switched to lightweight mode. Full screenshots remain in extension storage."
+  },
+  "data_synced": {
+    "message": "Data synced. Ready for export!"
+  },
+  "save_synced": {
+    "message": "✓ Changes saved and synced!"
+  },
+  "error_save_failed": {
+    "message": "Save failed: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "alert_select_annotation": {
+    "message": "Please select an annotation to delete"
+  },
+  "error_sync_failed": {
+    "message": "Failed to sync step list. Please try again."
+  },
+  "edit_step_label": {
+    "message": "Edit Step $NUM$",
+    "placeholders": { "num": { "content": "$1" } }
+  },
+  "delete_screenshot_title": {
+    "message": "Delete Screenshot"
+  },
+  "describe_step": {
+    "message": "Describe this step here."
+  },
+  "page_label": {
+    "message": "Page"
+  },
+  "unsaved_changes_warning": {
+    "message": "You have unsaved changes. Are you sure you want to leave?"
+  },
+  "quill_placeholder": {
+    "message": "Enter text content..."
+  },
+  "status_modified": {
+    "message": "Modified - unsaved"
+  },
+  "auto_saved": {
+    "message": "✓ Auto-saved"
+  },
+
+  "bg_worker_restart": {
+    "message": "Background restarted. Full-page capture interrupted — please retry."
+  },
+  "bg_long_shot_timeout": {
+    "message": "Full-page capture timed out. Please retry."
+  },
+  "bg_unknown_action": {
+    "message": "Unknown action"
+  },
+  "bg_default_nickname": {
+    "message": "User"
+  },
+  "bg_start_recording_success": {
+    "message": "Recording started"
+  },
+  "bg_stop_recording_success": {
+    "message": "Recording stopped"
+  },
+  "bg_rerecord_done": {
+    "message": "Re-record mode: operation saved"
+  },
+  "bg_capture_quota_exceeded": {
+    "message": "Capture rate limit exceeded. Please wait or reduce capture frequency."
+  },
+  "bg_invalid_tab": {
+    "message": "Invalid tab"
+  },
+  "bg_page_not_supported": {
+    "message": "This page is not supported (HTTP/HTTPS pages only)"
+  },
+  "bg_system_page": {
+    "message": "This page is not supported (system page)"
+  },
+  "bg_content_exists": {
+    "message": "Content script already injected"
+  },
+  "bg_inject_failed": {
+    "message": "Script injection failed: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "bg_inject_timeout": {
+    "message": "Content script injected (verification timed out)"
+  },
+  "bg_inject_error": {
+    "message": "Injection failed: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+
+  "content_rerecord_hint": {
+    "message": "🔄 Re-record mode: click the element you want to re-capture"
+  },
+
+  "tooltip_rerecord": {
+    "message": "Re-record this screenshot"
+  },
+  "tooltip_edit_screenshot": {
+    "message": "Edit screenshot"
+  },
+  "tooltip_goto_page": {
+    "message": "Go to this page"
+  },
+
+  "rerecord_title": {
+    "message": "Re-record Screenshot"
+  },
+  "rerecord_confirm": {
+    "message": "Re-record the screenshot for step $NUM$?",
+    "placeholders": { "num": { "content": "$1" } }
+  },
+  "rerecord_url_label": {
+    "message": "Page URL: $URL$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "btn_confirm_rerecord": {
+    "message": "Confirm Re-record"
+  },
+  "rerecord_failed": {
+    "message": "Re-record failed"
+  },
+  "rerecord_retry_failed": {
+    "message": "Re-record failed, please try again"
+  },
+  "clear_confirm": {
+    "message": "Are you sure you want to clear all records?"
+  },
+  "clear_done": {
+    "message": "All records cleared"
+  },
+  "error_export_general": {
+    "message": "Export failed: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "current_address_label": {
+    "message": "URL: $URL$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "screenshot_type_label": {
+    "message": "Type"
+  },
+  "click_content_label": {
+    "message": "Clicked"
+  },
+  "time_colon_label": {
+    "message": "Time:"
+  },
+  "renew_label": {
+    "message": "Renew"
+  },
+  "md_action_label": {
+    "message": "Action"
+  },
+  "md_element_text": {
+    "message": "Element text"
+  },
+  "md_page_label": {
+    "message": "Page"
+  },
+  "content_upgrade_title": {
+    "message": "🚀 Upgrade to Pro"
+  },
+  "content_upgrade_features": {
+    "message": "Pro features: unlimited screenshots, advanced export, priority support"
+  },
+  "content_later": {
+    "message": "Maybe Later"
+  }
+}

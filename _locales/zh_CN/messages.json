@@ -1,0 +1,733 @@
+{
+  "ext_name": {
+    "message": "智流华写助手"
+  },
+  "ext_description": {
+    "message": "自动记录网页操作并生成文档的Chrome扩展"
+  },
+
+  "status_not_recording": {
+    "message": "未开始记录"
+  },
+  "status_recording": {
+    "message": "正在记录..."
+  },
+  "status_loading": {
+    "message": "正在加载..."
+  },
+  "loading": {
+    "message": "加载中..."
+  },
+
+  "btn_start_recording": {
+    "message": "开始记录"
+  },
+  "btn_stop_recording": {
+    "message": "停止记录"
+  },
+  "btn_long_screenshot": {
+    "message": "整页截图"
+  },
+  "btn_cancel_long_screenshot": {
+    "message": "取消整页截图"
+  },
+  "btn_export": {
+    "message": "导出文档"
+  },
+  "btn_clear": {
+    "message": "清空记录"
+  },
+  "btn_upgrade": {
+    "message": "升级专业版"
+  },
+  "btn_upgrade_now": {
+    "message": "立即升级"
+  },
+  "btn_upgrade_pro_now": {
+    "message": "🚀 立即升级专业版"
+  },
+  "btn_upgrade_pro": {
+    "message": "⭐ 升级专业版"
+  },
+  "btn_retry": {
+    "message": "重试连接"
+  },
+  "btn_save": {
+    "message": "保存"
+  },
+  "btn_cancel": {
+    "message": "取消"
+  },
+  "btn_confirm": {
+    "message": "确认"
+  },
+  "btn_confirm_activate": {
+    "message": "确认激活"
+  },
+  "btn_preparing": {
+    "message": "准备中..."
+  },
+  "btn_activating": {
+    "message": "激活中..."
+  },
+  "btn_save_changes": {
+    "message": "保存修改"
+  },
+  "btn_back": {
+    "message": "返回"
+  },
+
+  "label_screenshot_count": {
+    "message": "截图数量:"
+  },
+  "label_click_count": {
+    "message": "点击次数:"
+  },
+  "label_duration": {
+    "message": "记录时长:"
+  },
+  "label_color": {
+    "message": "颜色"
+  },
+  "label_stroke_color": {
+    "message": "线条颜色"
+  },
+  "label_stroke_width": {
+    "message": "粗细:"
+  },
+  "label_stroke_thickness": {
+    "message": "线条粗细"
+  },
+  "label_opacity": {
+    "message": "透明度"
+  },
+
+  "section_screenshots": {
+    "message": "截图记录"
+  },
+  "no_screenshots": {
+    "message": "暂无截图记录"
+  },
+  "loading_screenshots": {
+    "message": "正在加载截图..."
+  },
+  "time_unknown": {
+    "message": "时间未知"
+  },
+  "url_unavailable": {
+    "message": "无可用地址"
+  },
+  "no_text": {
+    "message": "无文本"
+  },
+  "long_screenshot_label": {
+    "message": "整页截图"
+  },
+  "segments_label": {
+    "message": "段数 $COUNT$",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "height_label": {
+    "message": "高度 $HEIGHT$px",
+    "placeholders": { "height": { "content": "$1" } }
+  },
+  "duration_label": {
+    "message": "耗时 $DURATION$s",
+    "placeholders": { "duration": { "content": "$1" } }
+  },
+
+  "plan_premium": {
+    "message": "专业版"
+  },
+  "plan_free": {
+    "message": "免费版"
+  },
+  "usage_text": {
+    "message": "已使用 $USED$/$TOTAL$ 张截图",
+    "placeholders": {
+      "used": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
+  },
+  "usage_limit_reached": {
+    "message": "⚠️ 已达限制，请升级专业版"
+  },
+  "usage_remaining": {
+    "message": "剩余 $COUNT$ 张",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+
+  "upgrade_title": {
+    "message": "升级专业版"
+  },
+  "upgrade_message": {
+    "message": "免费版已达到使用限制，升级专业版享受无限制使用。"
+  },
+  "price_quarterly": {
+    "message": "季度版：¥19.9"
+  },
+  "price_yearly": {
+    "message": "年费版：¥49.9"
+  },
+  "price_yearly_discount": {
+    "message": "（省37%）"
+  },
+
+  "edit_screenshot": {
+    "message": "编辑截图"
+  },
+  "tool_select": {
+    "message": "选择工具"
+  },
+  "tool_text": {
+    "message": "文本工具"
+  },
+  "tool_rect": {
+    "message": "矩形"
+  },
+  "tool_circle": {
+    "message": "圆形"
+  },
+  "tool_line": {
+    "message": "直线"
+  },
+  "tool_free_draw": {
+    "message": "自由绘制"
+  },
+  "tool_number": {
+    "message": "序号标注"
+  },
+  "tool_arrow": {
+    "message": "箭头"
+  },
+  "tool_pen": {
+    "message": "画笔"
+  },
+  "tool_highlighter": {
+    "message": "高亮笔"
+  },
+  "tool_undo": {
+    "message": "撤销"
+  },
+  "tool_redo": {
+    "message": "重做"
+  },
+  "tool_delete_selection": {
+    "message": "删除选中标注"
+  },
+
+  "activation_title": {
+    "message": "输入授权码"
+  },
+  "activation_prompt": {
+    "message": "请输入您购买的专业版授权码："
+  },
+  "activation_placeholder": {
+    "message": "授权码格式：XXXX-XXXX-XXXX-XXXX"
+  },
+  "activation_empty": {
+    "message": "请输入授权码"
+  },
+  "activation_failed": {
+    "message": "激活失败"
+  },
+  "activation_success": {
+    "message": "激活成功！欢迎使用专业版功能。"
+  },
+  "activation_network_error": {
+    "message": "网络错误，请重试"
+  },
+
+  "error_init_failed": {
+    "message": "插件初始化失败，请尝试重新加载插件"
+  },
+  "error_bg_connect_failed": {
+    "message": "无法连接到插件后台服务"
+  },
+  "error_message_timeout": {
+    "message": "消息发送超时"
+  },
+  "error_start_recording": {
+    "message": "开始记录失败: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_stop_recording": {
+    "message": "停止记录失败: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_export_pdf": {
+    "message": "导出PDF失败: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_export_word": {
+    "message": "导出Word失败: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_export_md": {
+    "message": "导出Markdown失败: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_export_screenshot": {
+    "message": "导出截图失败: $MSG$\n请使用Word或PDF格式查看完整截图。",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_load_jszip": {
+    "message": "无法加载JSZip库"
+  },
+
+  "long_shot_preparing": {
+    "message": "整页截图准备中..."
+  },
+  "long_shot_capturing": {
+    "message": "整页截图进行中..."
+  },
+  "long_shot_capturing_progress": {
+    "message": "整页截图进行中 $CAPTURED$/$TOTAL$",
+    "placeholders": {
+      "captured": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
+  },
+  "long_shot_canceling": {
+    "message": "正在取消整页截图..."
+  },
+  "long_shot_completed": {
+    "message": "整页截图完成"
+  },
+  "long_shot_canceled": {
+    "message": "整页截图已取消"
+  },
+  "long_shot_failed": {
+    "message": "整页截图失败：$MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "long_shot_status_update": {
+    "message": "整页截图状态更新"
+  },
+  "long_shot_unknown_error": {
+    "message": "未知错误"
+  },
+  "warn_stop_before_long_shot": {
+    "message": "请先停止录制后再进行整页截图"
+  },
+  "warn_long_shot_in_progress": {
+    "message": "整页截图正在进行，请稍候"
+  },
+  "error_start_long_shot": {
+    "message": "无法启动整页截图：$MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_cancel_long_shot": {
+    "message": "取消整页截图失败，请稍后重试"
+  },
+
+  "free_limit_reached": {
+    "message": "免费版已达到$LIMIT$张截图限制，请升级专业版继续使用无限截图功能！",
+    "placeholders": { "limit": { "content": "$1" } }
+  },
+  "free_limit_warning": {
+    "message": "还剩1张截图，即将达到免费版限制"
+  },
+  "free_page_limit": {
+    "message": "免费版已达到20页限制，请升级专业版继续使用"
+  },
+  "free_limit_default": {
+    "message": "免费版已达到限制，请升级后使用整页截图"
+  },
+  "free_export_limit": {
+    "message": "免费版限制20张截图，将导出前20张截图。升级专业版可导出全部$COUNT$张截图！",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "no_operations_to_export": {
+    "message": "没有可导出的操作记录，请先进行一些操作。"
+  },
+
+  "export_choose_format": {
+    "message": "选择导出格式"
+  },
+  "export_step_count": {
+    "message": "共 $COUNT$ 个操作步骤",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "export_pdf": {
+    "message": "📄 PDF格式"
+  },
+  "export_pdf_desc": {
+    "message": "通过打印对话框保存，仅包含截图"
+  },
+  "export_word": {
+    "message": "📝 Word格式"
+  },
+  "export_word_desc": {
+    "message": "直接下载DOCX文件，仅包含截图"
+  },
+  "export_md": {
+    "message": "📋 Markdown格式"
+  },
+  "export_md_desc": {
+    "message": "直接下载MD文件，仅包含截图"
+  },
+  "export_pdf_instruction": {
+    "message": "即将打开打印对话框，请按以下步骤操作：\n\n1. 在打印对话框中选择\"另存为PDF\"\n2. 设置纸张大小为A4\n3. 选择保存位置并点击保存"
+  },
+  "export_pdf_hint": {
+    "message": "提示："
+  },
+  "export_pdf_hint_detail": {
+    "message": "请使用浏览器的打印功能（Ctrl+P），并选择\"另存为PDF\"来保存为PDF文件。"
+  },
+  "export_word_success": {
+    "message": "Word文档已下载！文件名: $FILE$",
+    "placeholders": { "file": { "content": "$1" } }
+  },
+  "export_md_success": {
+    "message": "Markdown文档已下载！文件名: $FILE$\n\n提示：截图已嵌入在Markdown文件中，可直接查看。",
+    "placeholders": { "file": { "content": "$1" } }
+  },
+  "export_screenshots_success": {
+    "message": "截图已打包下载！请解压后与Markdown文档一起查看。"
+  },
+  "doc_title": {
+    "message": "操作流程文档"
+  },
+  "doc_filename_prefix": {
+    "message": "操作流程文档"
+  },
+  "doc_screenshot_filename_prefix": {
+    "message": "操作流程截图"
+  },
+  "step_label": {
+    "message": "步骤 $NUM$",
+    "placeholders": { "num": { "content": "$1" } }
+  },
+  "step_label_with_action": {
+    "message": "步骤 $NUM$: $ACTION$",
+    "placeholders": {
+      "num": { "content": "$1" },
+      "action": { "content": "$2" }
+    }
+  },
+  "step_screenshot_alt": {
+    "message": "步骤$NUM$截图",
+    "placeholders": { "num": { "content": "$1" } }
+  },
+
+  "subscription_expiry_hours": {
+    "message": "您的专业版订阅将在$HOURS$小时$MINUTES$分钟后到期，请及时续费以免影响使用。",
+    "placeholders": {
+      "hours": { "content": "$1" },
+      "minutes": { "content": "$2" }
+    }
+  },
+  "subscription_expiry_minutes": {
+    "message": "您的专业版订阅将在$MINUTES$分钟后到期，请立即续费！",
+    "placeholders": { "minutes": { "content": "$1" } }
+  },
+  "subscription_expiry_title": {
+    "message": "⚠️ 订阅即将到期"
+  },
+  "subscription_expiry_confirm": {
+    "message": "点击\"确定\"前往续费页面，点击\"取消\"稍后提醒。"
+  },
+  "subscription_expired_title": {
+    "message": "🔔 订阅已过期"
+  },
+  "subscription_expired_body": {
+    "message": "您的专业版订阅已过期，已自动切换为免费版。\n\n免费版限制生成20页文档，如需继续使用专业版功能，请续费。\n\n季度版：¥19.9\n年费版：¥49.9（省37%）"
+  },
+  "subscription_expired_confirm": {
+    "message": "点击\"确定\"前往续费页面，点击\"取消\"继续使用免费版。"
+  },
+
+  "editor_title": {
+    "message": "截图编辑器 - CodeBuddy Pro"
+  },
+  "editor_project_title": {
+    "message": "编辑项目"
+  },
+  "tab_screenshots": {
+    "message": "截图"
+  },
+  "tab_layers": {
+    "message": "图层"
+  },
+  "tab_properties": {
+    "message": "属性"
+  },
+  "panel_screenshot_mgmt": {
+    "message": "截图管理"
+  },
+  "panel_add_screenshot": {
+    "message": "添加截图"
+  },
+  "panel_layer_mgmt": {
+    "message": "图层管理"
+  },
+  "panel_add_layer": {
+    "message": "添加图层"
+  },
+  "panel_properties": {
+    "message": "属性设置"
+  },
+  "step_details": {
+    "message": "步骤详情"
+  },
+  "toggle_collapse": {
+    "message": "折叠/展开"
+  },
+  "no_description": {
+    "message": "暂无描述信息"
+  },
+  "label_url": {
+    "message": "URL:"
+  },
+  "label_time": {
+    "message": "时间:"
+  },
+  "label_action": {
+    "message": "操作:"
+  },
+  "step_desc_editor": {
+    "message": "步骤描述编辑"
+  },
+  "mode_edit": {
+    "message": "编辑"
+  },
+  "mode_edit_tooltip": {
+    "message": "编辑模式"
+  },
+  "mode_preview": {
+    "message": "预览"
+  },
+  "mode_preview_tooltip": {
+    "message": "预览模式"
+  },
+  "markdown_placeholder": {
+    "message": "在此输入步骤描述，支持Markdown格式..."
+  },
+  "canvas_info": {
+    "message": "画布: $W$ x $H$",
+    "placeholders": {
+      "w": { "content": "$1" },
+      "h": { "content": "$2" }
+    }
+  },
+  "no_selection": {
+    "message": "未选择对象"
+  },
+  "upload_hint": {
+    "message": "拖拽图片到此处或点击选择文件"
+  },
+  "error_editor_init": {
+    "message": "编辑器初始化失败，请刷新页面重试"
+  },
+  "error_invalid_index": {
+    "message": "指定的截图索引无效"
+  },
+  "text_placeholder": {
+    "message": "双击编辑文本"
+  },
+  "selected_object": {
+    "message": "已选择: $TYPE$",
+    "placeholders": { "type": { "content": "$1" } }
+  },
+  "error_min_screenshot": {
+    "message": "至少需要保留一个截图"
+  },
+  "confirm_delete_screenshot": {
+    "message": "确定要删除这个截图吗？"
+  },
+  "error_select_image": {
+    "message": "请选择图片文件"
+  },
+  "error_save_order": {
+    "message": "保存最新顺序失败，请稍后重试"
+  },
+  "error_enter_version": {
+    "message": "请输入版本名称"
+  },
+  "error_no_screenshot": {
+    "message": "没有可保存的截图"
+  },
+  "error_storage_full": {
+    "message": "浏览器缓存空间不足，无法在本地保存历史版本。"
+  },
+  "save_version_success": {
+    "message": "版本保存成功！"
+  },
+  "error_save_version": {
+    "message": "保存版本失败: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "error_storage_trim": {
+    "message": "浏览器缓存空间不足，已改用精简模式保存。完整截图依旧保存在插件记录中。"
+  },
+  "data_synced": {
+    "message": "数据已同步，可以正常导出了！"
+  },
+  "save_synced": {
+    "message": "✓ 修改已保存并同步到插件！"
+  },
+  "error_save_failed": {
+    "message": "保存失败: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "alert_select_annotation": {
+    "message": "请先选择需要删除的标注"
+  },
+  "error_sync_failed": {
+    "message": "同步最新步骤列表失败，请稍后再试"
+  },
+  "edit_step_label": {
+    "message": "编辑步骤 $NUM$",
+    "placeholders": { "num": { "content": "$1" } }
+  },
+  "delete_screenshot_title": {
+    "message": "删除截图"
+  },
+  "describe_step": {
+    "message": "请在此描述该步骤的操作。"
+  },
+  "page_label": {
+    "message": "页面"
+  },
+  "unsaved_changes_warning": {
+    "message": "您有未保存的更改，确定要离开吗？"
+  },
+  "quill_placeholder": {
+    "message": "输入文本内容..."
+  },
+  "status_modified": {
+    "message": "已修改 - 未保存"
+  },
+  "auto_saved": {
+    "message": "✓ 已自动保存"
+  },
+
+  "bg_worker_restart": {
+    "message": "后台已重启，整页截图任务中断，请重试"
+  },
+  "bg_long_shot_timeout": {
+    "message": "整页截图超时，请重试"
+  },
+  "bg_unknown_action": {
+    "message": "未知操作"
+  },
+  "bg_default_nickname": {
+    "message": "用户"
+  },
+  "bg_start_recording_success": {
+    "message": "开始录制成功"
+  },
+  "bg_stop_recording_success": {
+    "message": "停止录制成功"
+  },
+  "bg_rerecord_done": {
+    "message": "重录模式，操作已记录"
+  },
+  "bg_capture_quota_exceeded": {
+    "message": "截图配额超限，请稍后再试或降低截图频率"
+  },
+  "bg_invalid_tab": {
+    "message": "无效的标签页"
+  },
+  "bg_page_not_supported": {
+    "message": "当前页面不支持插件功能（仅支持HTTP/HTTPS页面）"
+  },
+  "bg_system_page": {
+    "message": "当前页面不支持插件功能（系统页面）"
+  },
+  "bg_content_exists": {
+    "message": "Content script已存在"
+  },
+  "bg_inject_failed": {
+    "message": "脚本注入失败: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "bg_inject_timeout": {
+    "message": "Content script注入完成（验证超时）"
+  },
+  "bg_inject_error": {
+    "message": "注入失败: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+
+  "content_rerecord_hint": {
+    "message": "🔄 重新记录模式：请点击要重新截图的元素"
+  },
+
+  "tooltip_rerecord": {
+    "message": "重新记录此截图"
+  },
+  "tooltip_edit_screenshot": {
+    "message": "编辑截图"
+  },
+  "tooltip_goto_page": {
+    "message": "跳转到此页面"
+  },
+
+  "rerecord_title": {
+    "message": "重新记录截图"
+  },
+  "rerecord_confirm": {
+    "message": "确定要重新记录第 $NUM$ 步的截图吗？",
+    "placeholders": { "num": { "content": "$1" } }
+  },
+  "rerecord_url_label": {
+    "message": "页面地址：$URL$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "btn_confirm_rerecord": {
+    "message": "确认重录"
+  },
+  "rerecord_failed": {
+    "message": "重新记录失败"
+  },
+  "rerecord_retry_failed": {
+    "message": "重新记录失败，请重试"
+  },
+  "clear_confirm": {
+    "message": "确定要清空所有记录吗？"
+  },
+  "clear_done": {
+    "message": "记录已清空"
+  },
+  "error_export_general": {
+    "message": "导出文档失败: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+  "current_address_label": {
+    "message": "当前地址：$URL$",
+    "placeholders": { "url": { "content": "$1" } }
+  },
+  "screenshot_type_label": {
+    "message": "截图类型"
+  },
+  "click_content_label": {
+    "message": "点击内容"
+  },
+  "time_colon_label": {
+    "message": "时间:"
+  },
+  "renew_label": {
+    "message": "续费"
+  },
+  "md_action_label": {
+    "message": "操作"
+  },
+  "md_element_text": {
+    "message": "元素文本"
+  },
+  "md_page_label": {
+    "message": "页面"
+  },
+  "content_upgrade_title": {
+    "message": "🚀 升级专业版"
+  },
+  "content_upgrade_features": {
+    "message": "专业版功能：无限截图、高级导出、优先支持"
+  },
+  "content_later": {
+    "message": "稍后再说"
+  }
+}

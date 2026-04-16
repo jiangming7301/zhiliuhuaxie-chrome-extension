@@ -45,7 +45,7 @@ class ScreenshotEditor {
 
                 // 显示确认提示（可选）
                 e.preventDefault();
-                e.returnValue = '您有未保存的更改，确定要离开吗？';
+                e.returnValue = i18n('unsaved_changes_warning');
                 return e.returnValue;
             }
         });
@@ -72,23 +72,25 @@ class ScreenshotEditor {
             this.updateUI();
         } catch (error) {
             console.error('编辑器初始化失败:', error);
-            this.showError('编辑器初始化失败，请刷新页面重试');
+            this.showError(i18n('error_editor_init'));
         }
     }
 
     updateUI() {
+        document.title = i18n('editor_title');
         this.updateCanvasInfo();
         const selectionInfo = document.getElementById('selectionInfo');
         if (selectionInfo) {
-            selectionInfo.textContent = '未选择对象';
+            selectionInfo.textContent = i18n('no_selection');
         }
     }
 
     updateUI() {
+        document.title = i18n('editor_title');
         this.updateCanvasInfo();
         const selectionInfo = document.getElementById('selectionInfo');
         if (selectionInfo) {
-            selectionInfo.textContent = '未选择对象';
+            selectionInfo.textContent = i18n('no_selection');
         }
     }
 
@@ -301,7 +303,7 @@ class ScreenshotEditor {
                         this.currentScreenshotIndex = 0;
                         this.originalScreenshotIndex = index;
                     } else {
-                        throw new Error('指定的截图索引无效');
+                        throw new Error(i18n('error_invalid_index'));
                     }
                 } else {
                     this.screenshots = allScreenshots;
@@ -496,7 +498,7 @@ class ScreenshotEditor {
     initTextEditor() {
         this.textEditor = new Quill('#textEditor', {
             theme: 'snow',
-            placeholder: '输入文本内容...',
+            placeholder: i18n('quill_placeholder'),
             modules: {
                 toolbar: [
                     ['bold', 'italic', 'underline', 'strike'],
@@ -888,7 +890,7 @@ class ScreenshotEditor {
     updateCanvasInfo() {
         const canvasInfo = document.getElementById('canvasInfo');
         if (canvasInfo && this.canvas) {
-            canvasInfo.textContent = `画布: ${Math.round(this.canvas.getWidth())} x ${Math.round(this.canvas.getHeight())}`;
+            canvasInfo.textContent = i18n('canvas_info', [String(Math.round(this.canvas.getWidth())), String(Math.round(this.canvas.getHeight()))]);
         }
     }
 
@@ -952,12 +954,12 @@ class ScreenshotEditor {
     generateDefaultMarkdown(screenshot, index = 0) {
         const stepNumber = index + 1;
         const lines = [
-            `## 步骤 ${stepNumber}`,
+            `## ${i18n('step_label', [String(stepNumber)])}`,
             '',
-            screenshot.text || '请在此描述该步骤的操作。'
+            screenshot.text || i18n('describe_step')
         ];
         if (screenshot.url) {
-            lines.push('', `**页面**: ${screenshot.url}`);
+            lines.push('', `**${i18n('page_label')}**: ${screenshot.url}`);
         }
         return lines.join('\n');
     }
@@ -1098,14 +1100,14 @@ class ScreenshotEditor {
         const thumbnail = document.createElement('img');
         thumbnail.className = 'screenshot-thumbnail';
         thumbnail.src = screenshot.screenshot;
-        thumbnail.alt = `截图 ${index + 1}`;
+        thumbnail.alt = i18n('step_screenshot_alt', [String(index + 1)]);
 
         const info = document.createElement('div');
         info.className = 'screenshot-info';
 
         const title = document.createElement('div');
         title.className = 'screenshot-title';
-        title.textContent = `步骤 ${screenshot.step || index + 1}`;
+        title.textContent = i18n('step_label', [String(screenshot.step || index + 1)]);
 
         const meta = document.createElement('div');
         meta.className = 'screenshot-meta';
@@ -1125,7 +1127,7 @@ class ScreenshotEditor {
                 <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
             </svg>
         `;
-        deleteBtn.title = '删除截图';
+        deleteBtn.title = i18n('delete_screenshot_title');
         deleteBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             this.deleteScreenshot(index);
@@ -1181,7 +1183,7 @@ class ScreenshotEditor {
         this.updateContentDisplay(screenshot, index);
 
         // 更新项目标题
-        document.getElementById('projectTitle').textContent = `编辑步骤 ${screenshot.step || index + 1}`;
+        document.getElementById('projectTitle').textContent = i18n('edit_step_label', [String(screenshot.step || index + 1)]);
     }
 
     // 更新右侧内容显示
@@ -1191,7 +1193,7 @@ class ScreenshotEditor {
         // 更新步骤标题
         const stepTitle = document.getElementById('stepTitle');
         if (stepTitle) {
-            stepTitle.textContent = `步骤 ${stepNumber}`;
+            stepTitle.textContent = i18n('step_label', [String(stepNumber)]);
         }
         
         // 更新步骤描述
@@ -1206,7 +1208,7 @@ class ScreenshotEditor {
             } else if (screenshot.text) {
                 description = screenshot.text;
             } else {
-                description = '暂无描述信息';
+                description = i18n('no_description');
             }
             
             stepDescription.innerHTML = `<p>${description}</p>`;
@@ -1669,7 +1671,7 @@ class ScreenshotEditor {
     startTextEdit(pointer) {
         // 如果点击的是文本工具，在点击位置添加文本块
         if (this.currentTool === 'text') {
-            this.addTextBlock(pointer.x, pointer.y, '点击编辑文本');
+            this.addTextBlock(pointer.x, pointer.y, i18n('text_placeholder'));
         }
     }
 
@@ -1990,13 +1992,13 @@ class ScreenshotEditor {
         const obj = e.selected[0];
         if (obj) {
             this.updatePropertiesPanel(obj);
-            document.getElementById('selectionInfo').textContent = `已选择: ${obj.type}`;
+            document.getElementById('selectionInfo').textContent = i18n('selected_object', [obj.type]);
         }
     }
 
     // 对象取消选中事件
     onObjectDeselected() {
-        document.getElementById('selectionInfo').textContent = '未选择对象';
+        document.getElementById('selectionInfo').textContent = i18n('no_selection');
     }
 
     // 更新属性面板
@@ -2059,7 +2061,7 @@ class ScreenshotEditor {
         }
         const selectedObjects = this.canvas.getActiveObjects();
         if (!selectedObjects || selectedObjects.length === 0) {
-            alert('请先选择需要删除的标注');
+            alert(i18n('alert_select_annotation'));
             return;
         }
         this.pushHistorySnapshot();
@@ -2131,11 +2133,11 @@ class ScreenshotEditor {
     // 删除截图
     async deleteScreenshot(index) {
         if (this.screenshots.length <= 1) {
-            this.showError('至少需要保留一个截图');
+            this.showError(i18n('error_min_screenshot'));
             return;
         }
 
-        if (confirm('确定要删除这个截图吗？')) {
+        if (confirm(i18n('confirm_delete_screenshot'))) {
             this.screenshots.splice(index, 1);
             
             // 重新加载截图列表
@@ -2153,7 +2155,7 @@ class ScreenshotEditor {
                 await this.syncEditedDataToMainStorage();
             } catch (error) {
                 console.error('删除截图后同步数据失败:', error);
-                this.showError('同步最新步骤列表失败，请稍后再试');
+                this.showError(i18n('error_sync_failed'));
             }
         }
     }
@@ -2170,7 +2172,7 @@ class ScreenshotEditor {
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            this.showError('请选择图片文件');
+            this.showError(i18n('error_select_image'));
             return;
         }
 
@@ -2210,7 +2212,7 @@ class ScreenshotEditor {
         // 更新状态栏
         const statusText = document.getElementById('statusText');
         if (statusText) {
-            statusText.textContent = '已修改 - 未保存';
+            statusText.textContent = i18n('status_modified');
         }
     }
 
@@ -2312,7 +2314,7 @@ class ScreenshotEditor {
             await this.syncEditedDataToMainStorage();
         } catch (error) {
             console.error('同步排序结果失败:', error);
-            this.showError('保存最新顺序失败，请稍后重试');
+            this.showError(i18n('error_save_order'));
         }
     }
 
@@ -2382,7 +2384,7 @@ class ScreenshotEditor {
         const versionDescription = document.getElementById('versionDescription').value.trim();
 
         if (!versionName) {
-            this.showError('请输入版本名称');
+            this.showError(i18n('error_enter_version'));
             return;
         }
 
@@ -2393,7 +2395,7 @@ class ScreenshotEditor {
 
             const currentScreenshot = this.screenshots[this.currentScreenshotIndex];
             if (!currentScreenshot) {
-                this.showError('没有可保存的截图');
+                this.showError(i18n('error_no_screenshot'));
                 return;
             }
 
@@ -2424,16 +2426,16 @@ class ScreenshotEditor {
                 localStorage.setItem('editedVersions', JSON.stringify(versions));
                 localStorage.setItem(`edited_${versionId}`, JSON.stringify(versionData));
             } else {
-                this.showMessage('浏览器缓存空间不足，无法在本地保存历史版本。', 'error');
+                this.showMessage(i18n('error_storage_full'), 'error');
             }
 
-            this.showSuccess('版本保存成功！');
+            this.showSuccess(i18n('save_version_success'));
             this.closeModal('saveVersionModal');
             document.getElementById('versionName').value = '';
             document.getElementById('versionDescription').value = '';
         } catch (error) {
             console.error('保存版本失败:', error);
-            this.showError('保存版本失败: ' + error.message);
+            this.showError(i18n('error_save_version', [error.message]));
         }
     }
 
@@ -2572,7 +2574,7 @@ class ScreenshotEditor {
         }
         if (showPrompt && !this.storageWarningShown) {
             this.storageWarningShown = true;
-            this.showMessage('浏览器缓存空间不足，已改用精简模式保存。完整截图依旧保存在插件记录中。', 'error');
+            this.showMessage(i18n('error_storage_trim'), 'error');
         }
     }
 
@@ -2623,7 +2625,7 @@ class ScreenshotEditor {
     // 手动同步按钮事件
     async manualSyncToMainStorage() {
         await this.syncEditedDataToMainStorage();
-        this.showSuccess('数据已同步，可以正常导出了！');
+        this.showSuccess(i18n('data_synced'));
     }
 
     // 自动保存功能
@@ -2720,7 +2722,7 @@ class ScreenshotEditor {
             opacity: 0;
             transition: opacity 0.3s ease;
         `;
-        indicator.textContent = '✓ 已自动保存';
+        indicator.textContent = i18n('auto_saved');
 
         document.body.appendChild(indicator);
 
@@ -2804,12 +2806,12 @@ class ScreenshotEditor {
             await this.syncEditedDataToMainStorage();
 
             // 显示成功提示
-            this.showSuccess('✓ 修改已保存并同步到插件！');
+            this.showSuccess(i18n('save_synced'));
 
             console.log('保存并同步完成');
         } catch (error) {
             console.error('保存并同步失败:', error);
-            this.showError('保存失败: ' + error.message);
+            this.showError(i18n('error_save_failed', [error.message]));
         }
     }
 

@@ -60,7 +60,7 @@ class PopupController {
         console.log(`初始化重试 (${this.initRetryCount}/${this.maxRetries})...`);
         setTimeout(() => this.init(), 1000);
       } else {
-        this.showErrorState('插件初始化失败，请尝试重新加载插件');
+        this.showErrorState(i18n('error_init_failed'));
       }
     }
   }
@@ -69,7 +69,7 @@ class PopupController {
   showLoadingState() {
     const status = document.getElementById('status');
     if (status) {
-      status.textContent = '正在加载...';
+      status.textContent = i18n('status_loading');
       status.className = 'status stopped';
     }
     
@@ -86,7 +86,7 @@ class PopupController {
       
       const loadingText = document.createElement('div');
       loadingText.className = 'usage-text';
-      loadingText.textContent = '加载中...';
+      loadingText.textContent = i18n('loading');
       
       loadingDiv.appendChild(loadingText);
       usageInfo.appendChild(loadingDiv);
@@ -114,7 +114,7 @@ class PopupController {
   showErrorState(message) {
     const status = document.getElementById('status');
     if (status) {
-      status.textContent = '初始化失败';
+      status.textContent = i18n('error_init_failed');
       status.className = 'status stopped';
       status.style.backgroundColor = '#ffebee';
       status.style.color = '#c62828';
@@ -141,7 +141,7 @@ class PopupController {
       retryBtn.id = 'retryBtn';
       retryBtn.className = 'btn btn-primary';
       retryBtn.style.cssText = 'margin-top: 10px; padding: 8px;';
-      retryBtn.textContent = '重试连接';
+      retryBtn.textContent = i18n('btn_retry');
       
       progressDiv.appendChild(textDiv);
       progressDiv.appendChild(retryBtn);
@@ -170,7 +170,7 @@ class PopupController {
       }
     } catch (error) {
       console.error('与background连接失败:', error);
-      throw new Error('无法连接到插件后台服务');
+      throw new Error(i18n('error_bg_connect_failed'));
     }
   }
 
@@ -276,7 +276,7 @@ class PopupController {
       const signature = `${state.sessionId || 'unknown'}_${state.message}`;
       if (this.lastLongCaptureErrorSignature !== signature) {
         this.lastLongCaptureErrorSignature = signature;
-        this.showWarningMessage(`整页截图失败：${state.message}`);
+        this.showWarningMessage(i18n('long_shot_failed', [state.message]));
       }
     } else if (state.status !== 'error') {
       this.lastLongCaptureErrorSignature = null;
@@ -290,22 +290,22 @@ class PopupController {
     const progress = state.progress || {};
     switch (state.status) {
       case 'initializing':
-        return '整页截图准备中...';
+        return i18n('long_shot_preparing');
       case 'capturing':
         if (progress.total) {
-          return `整页截图进行中 ${progress.captured || 0}/${progress.total}`;
+          return i18n('long_shot_capturing_progress', [String(progress.captured || 0), String(progress.total)]);
         }
-        return '整页截图进行中...';
+        return i18n('long_shot_capturing');
       case 'canceling':
-        return '正在取消整页截图...';
+        return i18n('long_shot_canceling');
       case 'completed':
-        return '整页截图完成';
+        return i18n('long_shot_completed');
       case 'canceled':
-        return '整页截图已取消';
+        return i18n('long_shot_canceled');
       case 'error':
-        return `整页截图失败：${state.message || '未知错误'}`;
+        return i18n('long_shot_failed', [state.message || i18n('long_shot_unknown_error')]);
       default:
-        return '整页截图状态更新';
+        return i18n('long_shot_status_update');
     }
   }
 
@@ -461,13 +461,13 @@ class PopupController {
             screenshotCountEl.style.color = '#f44336';
             screenshotCountEl.style.fontWeight = 'bold';
             // 显示升级提示
-            this.showUpgradePrompt(`免费版已达到${limit}张截图限制，请升级专业版继续使用无限截图功能！`);
+            this.showUpgradePrompt(i18n('free_limit_reached', [String(limit)]));
           } else if (screenshots >= limit - 2) {
             screenshotCountEl.style.color = '#ff9800';
             screenshotCountEl.style.fontWeight = 'bold';
             // 接近限制时的提醒
             if (screenshots === limit - 1) {
-              this.showWarningMessage(`还剩1张截图，即将达到免费版限制`);
+              this.showWarningMessage(i18n('free_limit_warning'));
             }
           } else {
             screenshotCountEl.style.color = '';
@@ -507,11 +507,11 @@ class PopupController {
     const screenshotOps = operations.filter(op => op.screenshot);
     
     if (screenshotOps.length === 0) {
-      screenshotsContainer.innerHTML = '<div class="no-screenshots">暂无截图记录</div>';
+      screenshotsContainer.innerHTML = '<div class="no-screenshots">' + i18n('no_screenshots') + '</div>';
       return;
     }
     
-    screenshotsContainer.innerHTML = '<div class="loading-screenshots">正在加载截图...</div>';
+    screenshotsContainer.innerHTML = '<div class="loading-screenshots">' + i18n('loading_screenshots') + '</div>';
 
     // 异步生成截图HTML
     this.generateScreenshotsHtml(screenshotOps).then(screenshotsHtml => {
@@ -536,15 +536,15 @@ class PopupController {
       const op = screenshotOps[index];
       const stepNumber = index + 1;
       const isLongScreenshot = op.type === 'long_screenshot';
-      const time = op.timestamp ? new Date(op.timestamp).toLocaleString() : '时间未知';
+      const time = op.timestamp ? new Date(op.timestamp).toLocaleString() : i18n('time_unknown');
 
-      const rawUrl = op.url || '无可用地址';
+      const rawUrl = op.url || i18n('url_unavailable');
       const displayUrl = rawUrl.length > 50 ? rawUrl.substring(0, 50) + '...' : rawUrl;
 
       const displayScreenshot = await this.getDisplayScreenshot(op);
 
       const rerecordButton = !isLongScreenshot ? `
-              <button class="rerecord-button" data-index="${index}" data-url="${op.url || ''}" title="重新记录此截图">
+              <button class="rerecord-button" data-index="${index}" data-url="${op.url || ''}" title="${i18n('tooltip_rerecord')}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="23,4 23,10 17,10"></polyline>
                   <polyline points="1,20 1,14 7,14"></polyline>
@@ -556,33 +556,33 @@ class PopupController {
       const longShotMetrics = [];
       if (isLongScreenshot) {
         if (op.meta && Number.isFinite(op.meta.segments)) {
-          longShotMetrics.push(`段数 ${op.meta.segments}`);
+          longShotMetrics.push(i18n('segments_label', [String(op.meta.segments)]));
         }
         if (op.meta && Number.isFinite(op.meta.height)) {
-          longShotMetrics.push(`高度 ${Math.round(op.meta.height)}px`);
+          longShotMetrics.push(i18n('height_label', [String(Math.round(op.meta.height))]));
         }
         if (op.meta && Number.isFinite(op.meta.captureDurationMs)) {
-          longShotMetrics.push(`耗时 ${(op.meta.captureDurationMs / 1000).toFixed(1)}s`);
+          longShotMetrics.push(i18n('duration_label', [(op.meta.captureDurationMs / 1000).toFixed(1)]));
         }
       }
       const infoText = isLongScreenshot
-        ? (longShotMetrics.length ? longShotMetrics.join(' · ') : '整页截图')
-        : (op.text ? `"${op.text}"` : '无文本');
+        ? (longShotMetrics.length ? longShotMetrics.join(' · ') : i18n('long_screenshot_label'))
+        : (op.text ? `"${op.text}"` : i18n('no_text'));
 
       screenshotsHtml += `
         <div class="screenshot-item">
           <div class="screenshot-header">
             <span class="screenshot-index">${stepNumber}</span>
-            <span class="screenshot-url" title="${rawUrl}">当前地址：${displayUrl}</span>
+            <span class="screenshot-url" title="${rawUrl}">${i18n('current_address_label', [displayUrl])}</span>
             <div class="screenshot-actions">
-              <button class="edit-button" data-index="${index}" title="编辑截图">
+              <button class="edit-button" data-index="${index}" title="${i18n('tooltip_edit_screenshot')}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
               </button>
               ${rerecordButton}
-              <button class="play-button" data-url="${op.url || ''}" title="跳转到此页面">
+              <button class="play-button" data-url="${op.url || ''}" title="${i18n('tooltip_goto_page')}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="5,3 19,12 5,21"></polygon>
                 </svg>
@@ -590,10 +590,10 @@ class PopupController {
             </div>
           </div>
           <div class="screenshot-content">
-            <img src="${displayScreenshot}" alt="截图${stepNumber}" class="screenshot-image">
+            <img src="${displayScreenshot}" alt="${i18n('step_screenshot_alt', [String(stepNumber)])}" class="screenshot-image">
             <div class="screenshot-info">
-              <p><strong>${isLongScreenshot ? '截图类型' : '点击内容'}:</strong> ${infoText}</p>
-              <p><strong>时间:</strong> ${time}</p>
+              <p><strong>${isLongScreenshot ? i18n('screenshot_type_label') : i18n('click_content_label')}:</strong> ${infoText}</p>
+              <p><strong>${i18n('time_colon_label')}</strong> ${time}</p>
             </div>
           </div>
         </div>
@@ -1201,12 +1201,12 @@ class PopupController {
     const dialogHtml = `
       <div id="rerecordModal" class="dialog-overlay">
         <div class="dialog">
-          <h3>重新记录截图</h3>
-          <p>确定要重新记录第 ${index + 1} 步的截图吗？</p>
-          <p class="rerecord-url">页面地址：${url}</p>
+          <h3>${i18n('rerecord_title')}</h3>
+          <p>${i18n('rerecord_confirm', [String(index + 1)])}</p>
+          <p class="rerecord-url">${i18n('rerecord_url_label', [url])}</p>
           <div class="dialog-buttons">
-            <button id="confirmRerecord" class="btn btn-primary">确认重录</button>
-            <button id="cancelRerecord" class="btn btn-secondary">取消</button>
+            <button id="confirmRerecord" class="btn btn-primary">${i18n('btn_confirm_rerecord')}</button>
+            <button id="cancelRerecord" class="btn btn-secondary">${i18n('btn_cancel')}</button>
           </div>
         </div>
       </div>
@@ -1250,11 +1250,11 @@ class PopupController {
         // 关闭popup
         window.close();
       } else {
-        this.showErrorState(response.error || '重新记录失败');
+        this.showErrorState(response.error || i18n('rerecord_failed'));
       }
     } catch (error) {
       console.error('重新记录错误:', error);
-      this.showErrorState('重新记录失败，请重试');
+      this.showErrorState(i18n('rerecord_retry_failed'));
     }
   }
 
@@ -1641,7 +1641,7 @@ class PopupController {
   }
 
   addText() {
-    const text = new fabric.IText('双击编辑文本', {
+    const text = new fabric.IText(i18n('text_placeholder'), {
       left: 100,
       top: 100,
       fontFamily: 'Arial',
@@ -2016,8 +2016,8 @@ class PopupController {
         userStatusElement.classList.add('premium');
         userStatusElement.classList.remove('free');
         userStatusElement.innerHTML = `
-          <span class="plan-label">专业版</span>
-          <button id="renewReminder" class="plan-renew" style="display: none;" onclick="window.open('http://localhost:3000/#pricing')">续费</button>
+          <span class="plan-label">${i18n('plan_premium')}</span>
+          <button id="renewReminder" class="plan-renew" style="display: none;" onclick="window.open('http://localhost:3000/#pricing')">${i18n('renew_label')}</button>
         `;
       } else {
         // 已过期
@@ -2093,16 +2093,12 @@ class PopupController {
   showExpiryWarning(hours, minutes) {
     let message = '';
     if (hours > 0) {
-      message = `您的专业版订阅将在${hours}小时${minutes}分钟后到期，请及时续费以免影响使用。`;
+      message = i18n('subscription_expiry_hours', [String(hours), String(minutes)]);
     } else {
-      message = `您的专业版订阅将在${minutes}分钟后到期，请立即续费！`;
+      message = i18n('subscription_expiry_minutes', [String(minutes)]);
     }
 
-    if (confirm(`⚠️ 订阅即将到期
-
-${message}
-
-点击"确定"前往续费页面，点击"取消"稍后提醒。`)) {
+    if (confirm(`${i18n('subscription_expiry_title')}\n\n${message}\n\n${i18n('subscription_expiry_confirm')}`)) {
       window.open('http://localhost:3000/#pricing');
     }
   }
@@ -2134,18 +2130,9 @@ ${message}
   }
 
   showExpiredDialog() {
-    const message = `您的专业版订阅已过期，已自动切换为免费版。
+    const message = i18n('subscription_expired_body');
 
-免费版限制生成20页文档，如需继续使用专业版功能，请续费。
-
-季度版：¥19.9
-年费版：¥49.9（省37%）`;
-    
-    if (confirm(`🔔 订阅已过期
-
-${message}
-
-点击"确定"前往续费页面，点击"取消"继续使用免费版。`)) {
+    if (confirm(`${i18n('subscription_expired_title')}\n\n${message}\n\n${i18n('subscription_expired_confirm')}`)) {
       window.open('http://localhost:3000/#pricing');
     }
   }
@@ -2166,7 +2153,7 @@ ${message}
         statusElement.classList.remove('plan-warning');
         const nickname = this.usageInfo.userInfo?.nickname;
         statusElement.innerHTML = `
-          <span class="plan-label">专业版</span>
+          <span class="plan-label">${i18n('plan_premium')}</span>
           ${nickname ? `<span class="plan-addon">${nickname}</span>` : ''}
         `;
       }
@@ -2193,7 +2180,7 @@ ${message}
         statusElement.classList.remove('premium');
         statusElement.classList.remove('plan-warning');
         statusElement.innerHTML = `
-          <span class="plan-label">免费版</span>
+          <span class="plan-label">${i18n('plan_free')}</span>
         `;
       }
       
@@ -2209,13 +2196,13 @@ ${message}
       usageElement.innerHTML = `
         <div class="usage-progress">
           <div class="usage-text" style="color: ${used >= total ? '#f44336' : '#333'}">
-            已使用 ${used}/${total} 张截图
+            ${i18n('usage_text', [String(used), String(total)])}
           </div>
           <div class="progress-bar">
             <div class="progress-fill" style="width: ${Math.min((used/total)*100, 100)}%; background-color: ${progressColor}"></div>
           </div>
           <div class="remaining-text" style="color: ${remaining <= 0 ? '#f44336' : '#666'}">
-            ${remaining <= 0 ? '⚠️ 已达限制，请升级专业版' : `剩余 ${remaining} 张`}
+            ${remaining <= 0 ? i18n('usage_limit_reached') : i18n('usage_remaining', [String(remaining)])}
           </div>
         </div>
       `;
@@ -2223,17 +2210,17 @@ ${message}
       // 显示升级按钮逻辑
       if (remaining <= 0) {
         upgradeBtn.style.display = 'block';
-        upgradeBtn.innerHTML = '🚀 立即升级专业版';
+        upgradeBtn.innerHTML = i18n('btn_upgrade_pro_now');
         upgradeBtn.style.backgroundColor = '#f44336';
         upgradeBtn.style.animation = 'pulse 2s infinite';
       } else if (remaining <= 3) {
         upgradeBtn.style.display = 'block';
-        upgradeBtn.innerHTML = '⭐ 升级专业版';
+        upgradeBtn.innerHTML = i18n('btn_upgrade_pro');
         upgradeBtn.style.backgroundColor = '#ff9800';
         upgradeBtn.style.animation = 'none';
       } else {
         upgradeBtn.style.display = 'block';
-        upgradeBtn.innerHTML = '⭐ 升级专业版';
+        upgradeBtn.innerHTML = i18n('btn_upgrade_pro');
         upgradeBtn.style.backgroundColor = '#4CAF50';
         upgradeBtn.style.animation = 'none';
       }
@@ -2247,7 +2234,7 @@ ${message}
   async sendMessage(message, timeout = 5000) {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        reject(new Error('消息发送超时'));
+        reject(new Error(i18n('error_message_timeout')));
       }, timeout);
       
       try {
@@ -2271,17 +2258,17 @@ ${message}
 
   async startLongScreenshot() {
     if (this.isRecording) {
-      this.showWarningMessage('请先停止录制后再进行整页截图');
+      this.showWarningMessage(i18n('warn_stop_before_long_shot'));
       return;
     }
     if (this.isLongCaptureRunning) {
-      this.showWarningMessage('整页截图正在进行，请稍候');
+      this.showWarningMessage(i18n('warn_long_shot_in_progress'));
       return;
     }
     
     const button = document.getElementById('longShotBtn');
     if (button) {
-      button.textContent = '准备中...';
+      button.textContent = i18n('btn_preparing');
       button.disabled = true;
       button.style.opacity = '0.5';
     }
@@ -2290,14 +2277,14 @@ ${message}
       const response = await this.sendMessage({ action: 'startLongScreenshot' }, 15000);
       if (!response || !response.success) {
         if (response && response.error === 'USAGE_LIMIT_EXCEEDED') {
-          this.showUpgradePrompt(response.message || '免费版已达到限制，请升级后使用整页截图');
+          this.showUpgradePrompt(response.message || i18n('free_limit_default'));
           return;
         }
         if (response && response.error === 'SUBSCRIPTION_EXPIRED') {
           this.handleSubscriptionExpired();
           return;
         }
-        throw new Error(response?.message || response?.error || '启动整页截图失败');
+        throw new Error(response?.message || response?.error || i18n('error_start_long_shot', ['']));
       }
       
       if (response.state) {
@@ -2305,10 +2292,10 @@ ${message}
       }
     } catch (error) {
       console.error('启动整页截图失败:', error);
-      this.showWarningMessage(`无法启动整页截图：${error.message || error}`);
+      this.showWarningMessage(i18n('error_start_long_shot', [error.message || String(error)]));
     } finally {
       if (button) {
-        button.textContent = '整页截图';
+        button.textContent = i18n('btn_long_screenshot');
         const disabled = this.isRecording || this.isLongCaptureRunning;
         button.disabled = disabled;
         button.style.opacity = disabled ? '0.5' : '1';
@@ -2324,7 +2311,7 @@ ${message}
       await this.sendMessage({ action: 'cancelLongScreenshot' }, 5000);
     } catch (error) {
       console.error('取消整页截图失败:', error);
-      this.showWarningMessage('取消整页截图失败，请稍后重试');
+      this.showWarningMessage(i18n('error_cancel_long_shot'));
     }
   }
 
@@ -2334,7 +2321,7 @@ ${message}
       if (!this.usageInfo.isPremium) {
         const remaining = this.usageInfo.remainingPages || 0;
         if (remaining <= 0) {
-          this.showUpgradePrompt('免费版已达到20页限制，请升级专业版继续使用');
+          this.showUpgradePrompt(i18n('free_page_limit'));
           return;
         }
       }
@@ -2343,7 +2330,7 @@ ${message}
       this.isRecording = true;
       const status = document.getElementById('status');
       if (status) {
-        status.textContent = '正在记录...';
+        status.textContent = i18n('status_recording');
         status.className = 'status recording';
         // 强制重绘DOM
         status.style.backgroundColor = '#e8f5e8';
@@ -2405,7 +2392,7 @@ ${message}
       
     } catch (error) {
       console.error('开始记录失败:', error);
-      alert('开始记录失败: ' + error.message);
+      alert(i18n('error_start_recording', [error.message]));
       
       // 恢复UI状态
       this.isRecording = false;
@@ -2423,7 +2410,7 @@ ${message}
       // 更新状态显示
       const status = document.getElementById('status');
       if (status) {
-        status.textContent = '未开始记录';
+        status.textContent = i18n('status_not_recording');
         status.className = 'status stopped';
         // 强制重绘DOM
         status.style.backgroundColor = '#f5f5f5';
@@ -2472,7 +2459,7 @@ ${message}
       
     } catch (error) {
       console.error('停止记录失败:', error);
-      alert('停止记录失败: ' + error.message);
+      alert(i18n('error_stop_recording', [error.message]));
       
       // 如果出错，恢复录制状态
       this.isRecording = true;
@@ -2519,12 +2506,12 @@ ${message}
     const confirmBtn = document.getElementById('confirmActivation');
     
     if (!authCode) {
-      errorEl.textContent = '请输入授权码';
+      errorEl.textContent = i18n('activation_empty');
       return;
     }
     
     confirmBtn.disabled = true;
-    confirmBtn.textContent = '激活中...';
+    confirmBtn.textContent = i18n('btn_activating');
     
     try {
       const response = await this.sendMessage({ 
@@ -2534,16 +2521,16 @@ ${message}
       
       if (response.success) {
         this.hideActivationDialog();
-        alert('激活成功！欢迎使用专业版功能。');
+        alert(i18n('activation_success'));
         await this.loadPluginInfo();
       } else {
-        errorEl.textContent = response.error || '激活失败';
+        errorEl.textContent = response.error || i18n('activation_failed');
       }
     } catch (error) {
-      errorEl.textContent = '网络错误，请重试';
+      errorEl.textContent = i18n('activation_network_error');
     } finally {
       confirmBtn.disabled = false;
-      confirmBtn.textContent = '确认激活';
+      confirmBtn.textContent = i18n('btn_confirm_activate');
     }
   }
 
@@ -2581,7 +2568,7 @@ ${message}
     if (this.isRecording) {
       // 更新状态显示
       if (status) {
-        status.textContent = '正在记录...';
+        status.textContent = i18n('status_recording');
         status.className = 'status recording';
         
         // 强制应用样式（确保立即生效）
@@ -2613,7 +2600,7 @@ ${message}
     } else {
       // 更新状态显示
       if (status) {
-        status.textContent = '未开始记录';
+        status.textContent = i18n('status_not_recording');
         status.className = 'status stopped';
         
         // 强制应用样式（确保立即生效）
@@ -2653,7 +2640,7 @@ ${message}
       const operations = await this.getOperationsData();
       
       if (operations.length === 0) {
-        alert('没有可导出的操作记录，请先进行一些操作。');
+        alert(i18n('no_operations_to_export'));
         return;
       }
       
@@ -2665,7 +2652,7 @@ ${message}
         const limitedOperations = operations
           .filter(op => op.screenshot)
           .slice(0, 20);
-        alert(`免费版限制20张截图，将导出前20张截图。升级专业版可导出全部${screenshots}张截图！`);
+        alert(i18n('free_export_limit', [String(screenshots)]));
         this.showExportOptions(limitedOperations);
         return;
       }
@@ -2676,7 +2663,7 @@ ${message}
       
     } catch (error) {
       console.error('导出文档失败:', error);
-      alert('导出文档失败: ' + error.message);
+      alert(i18n('error_export_general', [error.message]));
     }
   }
   
@@ -2751,23 +2738,23 @@ ${message}
     });
     
     dialog.innerHTML = `
-      <h3 style="margin-top: 0; color: #333; font-size: 18px;">选择导出格式</h3>
-      <p style="color: #666; font-size: 14px;">共 ${operations.length} 个操作步骤</p>
+      <h3 style="margin-top: 0; color: #333; font-size: 18px;">${i18n('export_choose_format')}</h3>
+      <p style="color: #666; font-size: 14px;">${i18n('export_step_count', [String(operations.length)])}</p>
       <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
         <button id="exportPDF" style="padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-          <span style="font-size: 16px;">📄 PDF格式</span>
-          <span style="display: block; font-size: 12px; font-weight: normal; margin-top: 3px;">通过打印对话框保存，仅包含截图</span>
+          <span style="font-size: 16px;">${i18n('export_pdf')}</span>
+          <span style="display: block; font-size: 12px; font-weight: normal; margin-top: 3px;">${i18n('export_pdf_desc')}</span>
         </button>
         <button id="exportWord" style="padding: 10px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-          <span style="font-size: 16px;">📝 Word格式</span>
-          <span style="display: block; font-size: 12px; font-weight: normal; margin-top: 3px;">直接下载DOCX文件，仅包含截图</span>
+          <span style="font-size: 16px;">${i18n('export_word')}</span>
+          <span style="display: block; font-size: 12px; font-weight: normal; margin-top: 3px;">${i18n('export_word_desc')}</span>
         </button>
         <button id="exportMarkdown" style="padding: 10px; background-color: #607D8B; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-          <span style="font-size: 16px;">📋 Markdown格式</span>
-          <span style="display: block; font-size: 12px; font-weight: normal; margin-top: 3px;">直接下载MD文件，仅包含截图</span>
+          <span style="font-size: 16px;">${i18n('export_md')}</span>
+          <span style="display: block; font-size: 12px; font-weight: normal; margin-top: 3px;">${i18n('export_md_desc')}</span>
         </button>
         <button id="cancelExport" style="padding: 8px; background-color: #f5f5f5; color: #333; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; margin-top: 5px;">
-          取消
+          ${i18n('btn_cancel')}
         </button>
       </div>
     `;
@@ -2823,7 +2810,7 @@ ${message}
       printWindow.onload = () => {
         setTimeout(() => {
           // 显示操作指南
-          alert('即将打开打印对话框，请按以下步骤操作：\n\n1. 在打印对话框中选择"另存为PDF"\n2. 设置纸张大小为A4\n3. 选择保存位置并点击保存');
+          alert(i18n('export_pdf_instruction'));
           
           setTimeout(() => {
             printWindow.print();
@@ -2833,7 +2820,7 @@ ${message}
       
     } catch (error) {
       console.error('导出PDF失败:', error);
-      alert('导出PDF失败: ' + error.message);
+      alert(i18n('error_export_pdf', [error.message]));
     }
   }
   
@@ -2845,19 +2832,19 @@ ${message}
       
       if (op.screenshot) {
         // 生成步骤标题，包含操作描述
-        let stepTitle = `步骤 ${stepNumber}`;
+        let stepTitle = i18n('step_label', [String(stepNumber)]);
         if (op.action && op.element) {
           const elementText = op.text ? ` "${op.text}"` : '';
-          stepTitle = `步骤 ${stepNumber}: ${op.action}${elementText}`;
+          stepTitle = i18n('step_label_with_action', [String(stepNumber), op.action + elementText]);
         } else if (op.text) {
-          stepTitle = `步骤 ${stepNumber}: ${op.text}`;
+          stepTitle = i18n('step_label_with_action', [String(stepNumber), op.text]);
         }
-        
+
         stepsHtml += `
           <div class="step-section">
             <h2 class="step-title">${stepTitle}</h2>
             <div class="screenshot-container">
-              <img src="${op.screenshot}" alt="步骤${stepNumber}截图" class="screenshot-img" />
+              <img src="${op.screenshot}" alt="${i18n('step_screenshot_alt', [String(stepNumber)])}" class="screenshot-img" />
             </div>
           </div>
         `;
@@ -2869,7 +2856,7 @@ ${message}
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>操作流程文档</title>
+    <title>${i18n('doc_title')}</title>
     <style>
         @media print {
             body { margin: 0; padding: 20px; }
@@ -2934,11 +2921,11 @@ ${message}
 </head>
 <body>
     <div class="no-print">
-        <strong>提示：</strong>请使用浏览器的打印功能（Ctrl+P），并选择"另存为PDF"来保存为PDF文件。
+        <strong>${i18n('export_pdf_hint')}</strong>${i18n('export_pdf_hint_detail')}
     </div>
-    
+
     <div class="document-header">
-        <h1>操作流程文档</h1>
+        <h1>${i18n('doc_title')}</h1>
     </div>
     
     <div class="document-content">
@@ -2962,7 +2949,7 @@ ${message}
       // 创建下载链接
       const url = URL.createObjectURL(blob);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-      const filename = `操作流程文档_${timestamp}.doc`;
+      const filename = `${i18n('doc_filename_prefix')}_${timestamp}.doc`;
       
       // 创建下载链接并触发下载
       const a = document.createElement('a');
@@ -2977,11 +2964,11 @@ ${message}
         URL.revokeObjectURL(url);
       }, 100);
       
-      alert(`Word文档已下载！文件名: ${filename}`);
+      alert(i18n('export_word_success', [filename]));
       
     } catch (error) {
       console.error('导出Word失败:', error);
-      alert('导出Word失败: ' + error.message);
+      alert(i18n('error_export_word', [error.message]));
     }
   }
 
@@ -2995,14 +2982,14 @@ ${message}
       let contentHtml = '';
       if (op.screenshot) {
         // 生成步骤标题，包含操作描述
-        let stepTitle = `步骤 ${stepNumber}`;
+        let stepTitle = i18n('step_label', [String(stepNumber)]);
         if (op.action && op.element) {
           const elementText = op.text ? ` "${op.text}"` : '';
-          stepTitle = `步骤 ${stepNumber}: ${op.action}${elementText}`;
+          stepTitle = i18n('step_label_with_action', [String(stepNumber), op.action + elementText]);
         } else if (op.text) {
-          stepTitle = `步骤 ${stepNumber}: ${op.text}`;
+          stepTitle = i18n('step_label_with_action', [String(stepNumber), op.text]);
         }
-        
+
         // 播放图标，显示在标题右侧
         const playButton = op.url ? `
           <a href="${op.url}" target="_blank" style="display: inline-block; color: #6c5ce7; text-decoration: none; font-size: 24px; margin-left: 15px; vertical-align: middle;">
@@ -3015,7 +3002,7 @@ ${message}
             <h2 style="font-size: 18px; color: #333; margin-bottom: 15px; display: flex; align-items: center; justify-content: center;">
               ${stepTitle}${playButton}
             </h2>
-            <img src="${op.screenshot}" alt="步骤${stepNumber}截图" style="max-width: 100%; width: 20cm; height: auto; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" />
+            <img src="${op.screenshot}" alt="${i18n('step_screenshot_alt', [String(stepNumber)])}" style="max-width: 100%; width: 20cm; height: auto; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" />
           </div>
         `;
       }
@@ -3032,7 +3019,7 @@ ${message}
       <html>
       <head>
         <meta charset="utf-8">
-        <title>操作流程文档</title>
+        <title>${i18n('doc_title')}</title>
         <style>
           body {
             font-family: 'Microsoft YaHei', SimHei, Arial, sans-serif;
@@ -3090,7 +3077,7 @@ ${message}
         </style>
       </head>
       <body>
-        <h1>操作流程文档</h1>
+        <h1>${i18n('doc_title')}</h1>
         ${stepsHtml}
       </body>
       </html>
@@ -3113,7 +3100,7 @@ ${message}
       // 创建下载链接
       const url = URL.createObjectURL(blob);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-      const filename = `操作流程文档_${timestamp}.md`;
+      const filename = `${i18n('doc_filename_prefix')}_${timestamp}.md`;
       
       // 创建下载链接并触发下载
       const a = document.createElement('a');
@@ -3128,11 +3115,11 @@ ${message}
         URL.revokeObjectURL(url);
       }, 100);
       
-      alert(`Markdown文档已下载！文件名: ${filename}\n\n提示：截图已嵌入在Markdown文件中，可直接查看。`);
+      alert(i18n('export_md_success', [filename]));
       
     } catch (error) {
       console.error('导出Markdown失败:', error);
-      alert('导出Markdown失败: ' + error.message);
+      alert(i18n('error_export_md', [error.message]));
     }
   }
   
@@ -3157,7 +3144,7 @@ ${message}
         const url = URL.createObjectURL(content);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `操作流程截图_${timestamp}.zip`;
+        a.download = `${i18n('doc_screenshot_filename_prefix')}_${timestamp}.zip`;
         document.body.appendChild(a);
         a.click();
         
@@ -3167,11 +3154,11 @@ ${message}
           URL.revokeObjectURL(url);
         }, 100);
         
-        alert(`截图已打包下载！请解压后与Markdown文档一起查看。`);
+        alert(i18n('export_screenshots_success'));
       });
     } catch (error) {
       console.error('导出截图失败:', error);
-      alert('导出截图失败: ' + error.message + '\n请使用Word或PDF格式查看完整截图。');
+      alert(i18n('error_export_screenshot', [error.message]));
     }
   }
   
@@ -3186,14 +3173,14 @@ ${message}
       const script = document.createElement('script');
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
       script.onload = () => resolve(window.JSZip);
-      script.onerror = () => reject(new Error('无法加载JSZip库'));
+      script.onerror = () => reject(new Error(i18n('error_load_jszip')));
       document.head.appendChild(script);
     });
   }
   
   generateMarkdownDocument(operations) {
     // 生成Markdown文档，优先使用编辑后的内容
-    let mdContent = `# 操作流程文档\n\n`;
+    let mdContent = `# ${i18n('doc_title')}\n\n`;
 
     operations.forEach((op, index) => {
       const stepNumber = index + 1;
@@ -3204,17 +3191,17 @@ ${message}
         mdContent += op.markdownContent.trim() + '\n\n';
 
         // 确保截图已包含在编辑内容中，如果没有则添加
-        if (!op.markdownContent.includes(`![](${op.screenshot})`) && !op.markdownContent.includes(`![步骤${stepNumber}截图]`)) {
-          mdContent += `![步骤${stepNumber}截图](${op.screenshot})\n\n`;
+        if (!op.markdownContent.includes(`![](${op.screenshot})`) && !op.markdownContent.includes(`![${i18n('step_screenshot_alt', [String(stepNumber)])}]`)) {
+          mdContent += `![${i18n('step_screenshot_alt', [String(stepNumber)])}](${op.screenshot})\n\n`;
         }
       } else {
         // 如果没有编辑内容，使用默认格式
-        let stepTitle = `## 步骤 ${stepNumber}`;
+        let stepTitle = `## ${i18n('step_label', [String(stepNumber)])}`;
         if (op.action && op.element) {
           const elementText = op.text ? ` "${op.text}"` : '';
-          stepTitle = `## 步骤 ${stepNumber}: ${op.action}${elementText}`;
+          stepTitle = `## ${i18n('step_label_with_action', [String(stepNumber), op.action + elementText])}`;
         } else if (op.text) {
-          stepTitle = `## 步骤 ${stepNumber}: ${op.text}`;
+          stepTitle = `## ${i18n('step_label_with_action', [String(stepNumber), op.text])}`;
         }
 
         // 添加播放图标（在标题同一行）
@@ -3227,20 +3214,20 @@ ${message}
         // 添加基本操作信息
         if (op.action && op.element) {
           const elementText = op.text ? ` "${op.text}"` : '';
-          mdContent += `**操作**: ${op.action}${elementText}\n\n`;
+          mdContent += `**${i18n('md_action_label')}**: ${op.action}${elementText}\n\n`;
         }
 
         if (op.text) {
-          mdContent += `**元素文本**: ${op.text}\n\n`;
+          mdContent += `**${i18n('md_element_text')}**: ${op.text}\n\n`;
         }
 
         if (op.url) {
-          mdContent += `**页面**: ${op.url}\n\n`;
+          mdContent += `**${i18n('md_page_label')}**: ${op.url}\n\n`;
         }
 
         // 嵌入base64截图
         if (op.screenshot) {
-          mdContent += `![步骤${stepNumber}截图](${op.screenshot})\n\n`;
+          mdContent += `![${i18n('step_screenshot_alt', [String(stepNumber)])}](${op.screenshot})\n\n`;
         }
       }
 
@@ -3253,7 +3240,7 @@ ${message}
 
 
   async clearRecords() {
-    if (confirm('确定要清空所有记录吗？')) {
+    if (confirm(i18n('clear_confirm'))) {
       await chrome.storage.local.set({ operations: [], editedOperations: [] });
       try {
         localStorage.removeItem('operations');
@@ -3262,7 +3249,7 @@ ${message}
         console.warn('清理本地缓存失败:', e);
       }
       await this.loadPluginInfo();
-      alert('记录已清空');
+      alert(i18n('clear_done'));
     }
   }
 }

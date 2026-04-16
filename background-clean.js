@@ -80,7 +80,7 @@ async function rehydrateLongScreenshotState() {
         ...initialLongScreenshotState,
         status: 'error',
         error: 'service_worker_restart',
-        message: '后台已重启，整页截图任务中断，请重试'
+        message: chrome.i18n.getMessage('bg_worker_restart')
       };
       persistLongScreenshotState();
     } else {
@@ -123,7 +123,7 @@ async function handleLongScreenshotTimeout() {
     resetLongScreenshotState({
       status: 'error',
       error: 'timeout',
-      message: '整页截图超时，请重试'
+      message: chrome.i18n.getMessage('bg_long_shot_timeout')
     });
   }
 }
@@ -142,7 +142,7 @@ chrome.runtime.onInstalled.addListener(async () => {
       usageCount: 0,
       maxFreePages: 20,
       userInfo: {
-        nickname: "用户",
+        nickname: chrome.i18n.getMessage('bg_default_nickname'),
         email: ""
       }
     };
@@ -188,7 +188,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true; // 保持消息通道开放
   } else {
-    sendResponse({ success: false, error: '未知操作' });
+    sendResponse({ success: false, error: chrome.i18n.getMessage('bg_unknown_action') });
   }
 });
 
@@ -206,7 +206,7 @@ async function getPluginInfo() {
     return {
       success: true,
       isPremium: result.isPremium || false,
-      userInfo: result.userInfo || { nickname: "用户", email: "" },
+      userInfo: result.userInfo || { nickname: chrome.i18n.getMessage('bg_default_nickname'), email: "" },
       authToken: result.authToken || null,
       subscriptionExpire: result.subscriptionExpire || null
     };
@@ -233,7 +233,7 @@ async function checkUsage() {
     const isPremium = result.isPremium || false;
     const maxFreePages = result.maxFreePages || 20;
     const usageCount = result.usageCount || 0;
-    const userInfo = result.userInfo || { nickname: "用户", email: "" };
+    const userInfo = result.userInfo || { nickname: chrome.i18n.getMessage('bg_default_nickname'), email: "" };
     
     return {
       success: true,
@@ -269,7 +269,7 @@ async function checkUsageLimit() {
       return {
         allowed: false,
         error: 'USAGE_LIMIT_EXCEEDED',
-        message: `免费版已达到${limit}张截图限制，请升级专业版继续使用`,
+        message: chrome.i18n.getMessage('free_limit_reached', [String(limit)]),
         usedPages: used,
         maxPages: limit
       };
@@ -349,7 +349,7 @@ async function startRecording() {
     
     return {
       success: true,
-      message: '开始录制成功'
+      message: chrome.i18n.getMessage('bg_start_recording_success')
     };
   } catch (error) {
     console.error('开始录制失败:', error);
@@ -392,7 +392,7 @@ async function stopRecording() {
     
     return {
       success: true,
-      message: '停止录制成功'
+      message: chrome.i18n.getMessage('bg_stop_recording_success')
     };
   } catch (error) {
     console.error('停止录制失败:', error);
@@ -430,7 +430,7 @@ async function captureScreenshot(data, tab) {
       console.log('重录模式下，不创建新的操作记录');
       return {
         success: true,
-        message: '重录模式，操作已记录',
+        message: chrome.i18n.getMessage('bg_rerecord_done'),
         isRerecording: true
       };
     }
@@ -470,7 +470,7 @@ async function captureScreenshot(data, tab) {
         return {
           success: false,
           error: 'quota_exceeded',
-          message: '截图配额超限，请稍后再试或降低截图频率'
+          message: chrome.i18n.getMessage('bg_capture_quota_exceeded')
         };
       }
     }
@@ -626,7 +626,7 @@ async function injectContentScript(tab) {
       console.warn('无效的标签页信息:', tab);
       return {
         success: false,
-        error: '无效的标签页'
+        error: chrome.i18n.getMessage('bg_invalid_tab')
       };
     }
     
@@ -685,7 +685,7 @@ async function injectContentScript(tab) {
       console.warn('页面URL不支持:', tab?.url);
       return {
         success: false,
-        error: '当前页面不支持插件功能（仅支持HTTP/HTTPS页面）'
+        error: chrome.i18n.getMessage('bg_page_not_supported')
       };
     }
     
@@ -694,7 +694,7 @@ async function injectContentScript(tab) {
       console.warn('受限制的页面URL:', tab.url);
       return {
         success: false,
-        error: '当前页面不支持插件功能（系统页面）'
+        error: chrome.i18n.getMessage('bg_system_page')
       };
     }
     
@@ -704,7 +704,7 @@ async function injectContentScript(tab) {
       console.log('Content script已存在，ping响应:', response);
       return {
         success: true,
-        message: 'Content script已存在'
+        message: chrome.i18n.getMessage('bg_content_exists')
       };
     } catch (error) {
       console.log('需要注入content script到标签页:', tab.url);
@@ -733,7 +733,7 @@ async function injectContentScript(tab) {
       console.error('JS注入失败:', jsError);
       return {
         success: false,
-        error: `脚本注入失败: ${jsError.message}`
+        error: chrome.i18n.getMessage('bg_inject_failed', [jsError.message])
       };
     }
     
@@ -760,14 +760,14 @@ async function injectContentScript(tab) {
     console.warn('无法验证content script，但注入操作已完成');
     return {
       success: true,
-      message: 'Content script注入完成（验证超时）'
+      message: chrome.i18n.getMessage('bg_inject_timeout')
     };
     
   } catch (error) {
     console.error('注入content script失败:', error);
     return {
       success: false,
-      error: `注入失败: ${error.message}`
+      error: chrome.i18n.getMessage('bg_inject_error', [error.message])
     };
   }
 }
